@@ -89,12 +89,41 @@ fn redirectConnectCall(pid: os.pid_t, regs: c.user_regs_struct) !void {
     const sockaddr_register_ptr = regs.rsi;
     const sockaddr = try mem_rw.readSockaddr_PVReadv(pid, sockaddr_register_ptr);
 
-    if (sockaddr.family == os.AF_INET or sockaddr.family == os.AF_INET6) {
-        var address = std.net.Address.initPosix(@alignCast(4, &sockaddr));
-        warn("{} connect( {} )\n", .{ pid, address });
+    if (sockaddr.family != os.AF_INET and sockaddr.family != os.AF_INET6) {
+        return;
     }
-    //  address.setPort(9988);
-    //  try mem_rw.writeSockaddr_Ptrace(pid, sockaddr_register_ptr, address.any);
+    var address = std.net.Address.initPosix(@alignCast(4, &sockaddr));
+    warn("[{}] connect( {} )\n", .{ pid, address });
+
+    var buffer = [_]u8{0} ** 20;
+    const stdin = std.io.getStdIn();
+    while (true) {
+        warn("Please enter a port number (leave blank for unchanged):\n", .{});
+        // TODO read same input regardless of how line is broken (^D, Enter, etc)
+        const read_bytes = try stdin.read(buffer[0..]);
+        if (read_bytes == 0 or (read_bytes == 1 and buffer[0] == '\n')) break;
+        const user_input = buffer[0 .. read_bytes - 1];
+        const new_port = std.fmt.parseInt(u16, user_input, 10) catch |err| {
+            warn("\"{}\" is an invalid port number\n", .{user_input});
+            continue;
+        };
+        address.setPort(new_port);
+        break;
+    }
+    while (true) {
+        warn("Please enter an ip address (leave blank for unchanged):\n", .{});
+        const read_bytes = try stdin.read(buffer[0..]);
+        if (read_bytes == 0 or (read_bytes == 1 and buffer[0] == '\n')) break;
+        const user_input = buffer[0 .. read_bytes - 1];
+        const new_addr = std.net.Address.parseIp(user_input, address.getPort()) catch |err| {
+            warn("\"{}\" is an invalid ip\n", .{user_input});
+            continue;
+        };
+        address = new_addr;
+        break;
+    }
+    warn("new ip: {}\n", .{address});
+    try mem_rw.writeSockaddr_Ptrace(pid, sockaddr_register_ptr, address.any);
 }
 
 /// Forks and initiates ptrace from the child program.

@@ -78,7 +78,7 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
 fn begin_syscall(pid: os.pid_t) !c.user_regs_struct {
     // Collect syscall arguments
     const registers = try ptrace.getregs(pid);
-    print_call_info(pid, registers);
+    // print_call_info(pid, registers);
 
     //  Tracee will now conduct the syscall
     try ptrace.syscall(pid);
@@ -95,7 +95,7 @@ fn print_call_info(pid: os.pid_t, registers: c.user_regs_struct) void {
 fn end_syscall(pid: os.pid_t) !void {
     const registers = try ptrace.getregs(pid);
 
-    warn("[{}] = {}\n", .{ pid, @intCast(c_long, registers.rax) });
+    // warn("[{}] = {}\n", .{ pid, @intCast(c_long, registers.rax) });
 
     // Resume tracee
     try ptrace.syscall(pid);
