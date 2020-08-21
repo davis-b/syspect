@@ -99,10 +99,10 @@ fn redirectConnectCall(pid: os.pid_t, regs: c.user_regs_struct) !void {
     const stdin = std.io.getStdIn();
     while (true) {
         warn("Please enter a port number (leave blank for unchanged):\n", .{});
-        // TODO read same input regardless of how line is broken (^D, Enter, etc)
-        const read_bytes = try stdin.read(buffer[0..]);
-        if (read_bytes == 0 or (read_bytes == 1 and buffer[0] == '\n')) break;
-        const user_input = buffer[0 .. read_bytes - 1];
+        var read_bytes = try stdin.read(buffer[0..]);
+        if (buffer[read_bytes - 1] == '\n') read_bytes -= 1;
+        if (read_bytes == 0) break;
+        const user_input = buffer[0..read_bytes];
         const new_port = std.fmt.parseInt(u16, user_input, 10) catch |err| {
             warn("\"{}\" is an invalid port number\n", .{user_input});
             continue;
@@ -112,9 +112,10 @@ fn redirectConnectCall(pid: os.pid_t, regs: c.user_regs_struct) !void {
     }
     while (true) {
         warn("Please enter an ip address (leave blank for unchanged):\n", .{});
-        const read_bytes = try stdin.read(buffer[0..]);
-        if (read_bytes == 0 or (read_bytes == 1 and buffer[0] == '\n')) break;
-        const user_input = buffer[0 .. read_bytes - 1];
+        var read_bytes = try stdin.read(buffer[0..]);
+        if (buffer[read_bytes - 1] == '\n') read_bytes -= 1;
+        if (read_bytes == 0) break;
+        const user_input = buffer[0..read_bytes];
         const new_addr = std.net.Address.parseIp(user_input, address.getPort()) catch |err| {
             warn("\"{}\" is an invalid ip\n", .{user_input});
             continue;
@@ -122,7 +123,7 @@ fn redirectConnectCall(pid: os.pid_t, regs: c.user_regs_struct) !void {
         address = new_addr;
         break;
     }
-    warn("new ip: {}\n", .{address});
+    warn("New address: {}\n", .{address});
     try mem_rw.writeSockaddr_Ptrace(pid, sockaddr_register_ptr, address.any);
 }
 
