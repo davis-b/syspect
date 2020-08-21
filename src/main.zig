@@ -24,7 +24,7 @@ const std = @import("std");
 const os = std.os;
 const warn = std.debug.warn;
 
-const ptrace = @import("ptrace.zig").ptrace;
+const ptrace = @import("ptrace.zig");
 const c = @import("c.zig");
 const mem_rw = @import("memory_rw.zig");
 
@@ -52,7 +52,7 @@ fn init(allocator: *std.mem.Allocator) !os.pid_t {
     const tracee_pid = try fork(allocator, target_argv);
     var opts = c.PTRACE_O_EXITKILL | c.PTRACE_O_TRACEFORK | c.PTRACE_O_TRACECLONE;
     opts |= c.PTRACE_O_TRACESYSGOOD | c.PTRACE_O_TRACEEXEC;
-    _ = try ptrace(c.PTRACE_SETOPTIONS, tracee_pid, 0, opts);
+    _ = try ptrace.ptrace(c.PTRACE_SETOPTIONS, tracee_pid, 0, opts);
 
     return tracee_pid;
 }
@@ -62,7 +62,7 @@ pub fn main() !void {
     warn("target pid: {}\n", .{tracee_pid});
 
     // Resume tracee
-    _ = try ptrace(c.PTRACE_SYSCALL, tracee_pid, 0, 0);
+    _ = try ptrace.syscall(tracee_pid);
 
     var tracee_map = events.TraceeMap.init(allocator);
     defer tracee_map.deinit();
@@ -109,7 +109,7 @@ fn fork(allocator: *std.mem.Allocator, argv: []const []const u8) !os.pid_t {
         -1 => return error.UnknownForkingError,
         // child process
         0 => {
-            _ = try ptrace(c.PTRACE_TRACEME, 0, 0, 0);
+            _ = try ptrace.ptrace(c.PTRACE_TRACEME, 0, 0, 0);
             const err = os.execvpe(allocator, argv, &envmap);
             return err;
         },
