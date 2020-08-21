@@ -53,11 +53,11 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
     if (WIFSTOPPED(@intCast(c_int, wr.status))) {
         const stopsig = os.WSTOPSIG(wr.status);
         if (stopsig != 133) {
-            warn("[{}] status: {}  stopsig: {} {}\n", .{ wr.pid, wr.status, stopsig, stopsig & 0x80 });
+            warn("[{}] status: {}  stopsig: {} {}\n", .{ tracee.pid, wr.status, stopsig, stopsig & 0x80 });
             try ptrace.syscall(tracee.pid);
             return EventAction.NORMAL;
         }
-    } else warn("[{}] wait no stop!\n", .{wr.pid});
+    } else warn("[{}] wait no stop!\n", .{tracee.pid});
 
     switch (tracee.state) {
         .RUNNING => {
