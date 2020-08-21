@@ -1,5 +1,6 @@
 // Notice: This program only works on x86_64 linux.
-// It can be patched to work on other architectures. Would require a redesign to work on Windows.
+// It can be patched to work on other architectures.
+//  However, it would require a redesign to work on Windows.
 // Program traces linux system calls of target program
 
 // TODO:
