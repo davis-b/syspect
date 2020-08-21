@@ -34,18 +34,15 @@ fn usage(our_name: [*:0]u8) void {
 }
 
 fn init(allocator: *std.mem.Allocator) !os.pid_t {
-    var argv_len: usize = 0;
-    for (os.argv) |_| argv_len += 1;
-
-    if (argv_len <= 1) {
+    if (os.argv.len <= 1) {
         usage(os.argv[0]);
         os.exit(1);
     }
     const our_name = os.argv[0];
 
-    var target_argv = try allocator.alloc([]u8, argv_len - 1);
+    var target_argv = try allocator.alloc([]u8, os.argv.len - 1);
     defer allocator.free(target_argv);
-    for (os.argv[1..argv_len]) |arg, index| {
+    for (os.argv[1..os.argv.len]) |arg, index| {
         var len: usize = 0;
         while (arg[len] != 0) len += 1;
         target_argv[index] = arg[0..len];
