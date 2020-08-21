@@ -59,10 +59,8 @@ pub fn next_event(tracee_map: *TraceeMap) !EventAction {
 
     switch (tracee.state) {
         .RUNNING => {
-            try begin_syscall(tracee.pid);
+            const registers = try begin_syscall(tracee.pid);
             tracee.state = .EXECUTING_CALL;
-
-            const registers = try ptrace.getregs(tracee.pid);
             if (registers.orig_rax == @enumToInt(os.SYS.connect)) return EventAction.INSPECT;
         },
         .EXECUTING_CALL => {
@@ -75,14 +73,19 @@ pub fn next_event(tracee_map: *TraceeMap) !EventAction {
 
 /// Tracee has stopped execution right before
 ///  executing a syscall.
-fn begin_syscall(pid: os.pid_t) !void {
+fn begin_syscall(pid: os.pid_t) !c.user_regs_struct {
     // Collect syscall arguments
     const registers = try ptrace.getregs(pid);
-    const call_name = @tagName(@intToEnum(os.SYS, registers.orig_rax));
-    warn("[{}] {}() \n", .{ pid, call_name });
+    print_call_info(pid, registers);
 
     //  Tracee will now conduct the syscall
     try ptrace.syscall(pid);
+    return registers;
+}
+
+fn print_call_info(pid: os.pid_t, registers: c.user_regs_struct) void {
+    const call_name = @tagName(@intToEnum(os.SYS, registers.orig_rax));
+    warn("[{}] {}() \n", .{ pid, call_name });
 }
 
 /// Tracee has finished its syscall
