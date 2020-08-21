@@ -77,14 +77,14 @@ pub fn main() !void {
             .EXIT => break,
             .NORMAL => {},
             .INSPECT => {
-                warn("TODO: inspect this syscall\n", .{});
+                try redirectConnectCall(pid, registers);
             },
         }
     }
 }
 
 /// Modifies 'connect' syscalls to change the sockaddr struct in the tracee's memory
-fn handleSyscall(regs: *c.user_regs_struct, pid: os.pid_t) !void {
+fn redirectConnectCall(pid: os.pid_t, regs: c.user_regs_struct) !void {
     // rsi register contains pointer to a sockaddr (connect syscall on x86_64)
     const sockaddr_register_ptr = regs.rsi;
     const sockaddr = try mem_rw.readSockaddr_PVReadv(pid, sockaddr_register_ptr);
@@ -95,10 +95,6 @@ fn handleSyscall(regs: *c.user_regs_struct, pid: os.pid_t) !void {
     }
     //  address.setPort(9988);
     //  try mem_rw.writeSockaddr_Ptrace(pid, sockaddr_register_ptr, address.any);
-
-    //    const connect_addrlen : os.socklen_t = regs.rdx;
-    const connect_fd: c_int = regs.rdi;
-    warn("fd: {}\n", .{connect_fd});
 }
 
 /// Forks and initiates ptrace from the child program.
