@@ -149,7 +149,7 @@ fn fork(allocator: *std.mem.Allocator, argv: []const []const u8) !os.pid_t {
         0 => {
             _ = try ptrace(c.PTRACE_TRACEME, 0, 0, 0);
             const err = os.execvpe(allocator, argv, &envmap);
-            return error.ChildProcessError;
+            return err;
         },
         else => {
             _ = os.waitpid(child_pid, 0);
