@@ -68,8 +68,10 @@ pub fn main() !void {
     defer tracee_map.deinit();
     const tracee = try events.get_or_make_tracee(&tracee_map, tracee_pid);
 
+    var pid: os.pid_t = undefined;
+    var registers: c.user_regs_struct = undefined;
     while (true) {
-        const action = try events.next_event(&tracee_map);
+        const action = try events.next_event(&tracee_map, &pid, &registers);
         switch (action) {
             .CONT => continue,
             .EXIT => break,

@@ -28,13 +28,14 @@ const Tracee = struct {
 
 pub const TraceeMap = std.AutoHashMap(os.pid_t, Tracee);
 
-pub fn next_event(tracee_map: *TraceeMap) !EventAction {
+pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_regs_struct) !EventAction {
     const wr = waitpid(-1, 0) catch |err| {
         if (tracee_map.count() == 0) return EventAction.EXIT;
         return EventAction.CONT;
     };
 
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, wr.pid);
+    pid.* = tracee.pid;
 
     // Process exited normally
     if (os.WIFEXITED(wr.status)) {
@@ -59,9 +60,9 @@ pub fn next_event(tracee_map: *TraceeMap) !EventAction {
 
     switch (tracee.state) {
         .RUNNING => {
-            const registers = try begin_syscall(tracee.pid);
+            registers.* = try begin_syscall(tracee.pid);
             tracee.state = .EXECUTING_CALL;
-            if (registers.orig_rax == @enumToInt(os.SYS.connect)) return EventAction.INSPECT;
+            if (registers.*.orig_rax == @enumToInt(os.SYS.connect)) return EventAction.INSPECT;
         },
         .EXECUTING_CALL => {
             try end_syscall(tracee.pid);
