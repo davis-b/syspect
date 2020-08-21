@@ -78,6 +78,7 @@ pub fn main() !void {
             .NORMAL => {},
             .INSPECT => {
                 try redirectConnectCall(pid, registers);
+                try events.resume_from_inspection(&tracee_map, &pid, &registers);
             },
         }
     }

@@ -61,9 +61,13 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
 
     switch (tracee.state) {
         .RUNNING => {
-            registers.* = try begin_syscall(tracee.pid);
+            // Collect syscall arguments
+            registers.* = try ptrace.getregs(tracee.pid);
+
+            const inspect_this_call: bool = (registers.orig_rax == @enumToInt(os.SYS.connect));
+            if (inspect_this_call) return EventAction.INSPECT;
+            try begin_syscall(tracee.pid, registers);
             tracee.state = .EXECUTING_CALL;
-            if (registers.*.orig_rax == @enumToInt(os.SYS.connect)) return EventAction.INSPECT;
         },
         .EXECUTING_CALL => {
             try end_syscall(tracee.pid);
@@ -73,19 +77,22 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
     return EventAction.NORMAL;
 }
 
-/// Tracee has stopped execution right before
-///  executing a syscall.
-fn begin_syscall(pid: os.pid_t) !c.user_regs_struct {
-    // Collect syscall arguments
-    const registers = try ptrace.getregs(pid);
-    // print_call_info(pid, registers);
-
-    //  Tracee will now conduct the syscall
-    try ptrace.syscall(pid);
-    return registers;
+/// TODO replace this with @suspend and resume in next_event and caller code respectively
+pub fn resume_from_inspection(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_regs_struct) !void {
+    const tracee: *Tracee = try get_or_make_tracee(tracee_map, pid.*);
+    try begin_syscall(tracee.pid, registers);
+    tracee.state = .EXECUTING_CALL;
 }
 
-fn print_call_info(pid: os.pid_t, registers: c.user_regs_struct) void {
+/// Tracee has stopped execution right before
+///  executing a syscall.
+fn begin_syscall(pid: os.pid_t, registers: *c.user_regs_struct) !void {
+    // print_call_info(pid, registers);
+    //  Tracee will now conduct the syscall
+    try ptrace.syscall(pid);
+}
+
+fn print_call_info(pid: os.pid_t, registers: *c.user_regs_struct) void {
     const call_name = @tagName(@intToEnum(os.SYS, registers.orig_rax));
     warn("[{}] {}() \n", .{ pid, call_name });
 }
