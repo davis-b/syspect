@@ -81,50 +81,11 @@ pub fn main() !void {
     }
 }
 
-/// Returns true to indicate caller should 'continue' to their next loop
-fn handleSignals(wait_result: WaitResult) !bool {
-    var siginfo: os.siginfo_t = undefined;
-    _ = try ptrace(c.PTRACE_GETSIGINFO, wait_result.pid, 0, &siginfo);
-    switch (siginfo.signo) {
-        os.SIGSTOP => {
-            warn("||\nSIGSTOP\n||\n", .{});
-            _ = try ptrace(c.PTRACE_SYSCALL, wait_result.pid, 0, 0);
-            return true;
-        },
-        os.SIGABRT => {
-            warn("|| SIGABRT\n", .{});
-            _ = try ptrace(c.PTRACE_SYSCALL, wait_result.pid, 0, 0);
-            return true;
-        },
-        else => {},
-    }
-    return false;
-}
-
-/// Handle attaching to new processes/threads
-fn handleCloning(wait_result: WaitResult) !void {
-    if ((@intCast(c_int, wait_result.status) >> 8) == (os.SIGTRAP | (c.PTRACE_EVENT_CLONE << 8))) {
-        warn("| | CLONE\n", .{});
-    }
-    const event = @intCast(c_int, wait_result.status) >> 16;
-
-    if (event == c.PTRACE_EVENT_EXEC) {
-        warn("| | EXEC event! {}\n", .{wait_result});
-    }
-
-    if (event == c.PTRACE_EVENT_CLONE or event == c.PTRACE_EVENT_FORK or event == c.PTRACE_EVENT_VFORK) {
-        var child_pid: os.pid_t = 0;
-        _ = try ptrace(c.PTRACE_GETEVENTMSG, wait_result.pid, 0, &child_pid);
-        warn("attached {} to {}\n", .{ wait_result.pid, child_pid });
-    }
-}
-
 /// Modifies 'connect' syscalls to change the sockaddr struct in the tracee's memory
 fn handleSyscall(regs: *c.user_regs_struct, pid: os.pid_t) !void {
     // rsi register contains pointer to a sockaddr (connect syscall on x86_64)
     const sockaddr_register_ptr = regs.rsi;
     const sockaddr = try mem_rw.readSockaddr_PVReadv(pid, sockaddr_register_ptr);
-    //const sockaddr = try mem_rw.readSockaddr_Ptrace(pid, sockaddr_register_ptr);
 
     if (sockaddr.family == os.AF_INET or sockaddr.family == os.AF_INET6) {
         var address = std.net.Address.initPosix(@alignCast(4, &sockaddr));
@@ -133,9 +94,9 @@ fn handleSyscall(regs: *c.user_regs_struct, pid: os.pid_t) !void {
     //  address.setPort(9988);
     //  try mem_rw.writeSockaddr_Ptrace(pid, sockaddr_register_ptr, address.any);
 
-    //    const connect_fd: c_int = regs.rdi;
     //    const connect_addrlen : os.socklen_t = regs.rdx;
-    // warn("{} {} {} {} {} {}\n", .{ registers.rdi, registers.rsi, registers.rdx, registers.r10, registers.r8, registers.r9 });
+    const connect_fd: c_int = regs.rdi;
+    warn("fd: {}\n", .{connect_fd});
 }
 
 /// Forks and initiates ptrace from the child program.
