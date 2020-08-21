@@ -35,6 +35,7 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
     };
 
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, wr.pid);
+    std.debug.assert(tracee.pid == wr.pid);
     pid.* = tracee.pid;
 
     // Process exited normally
