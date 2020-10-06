@@ -56,6 +56,7 @@ fn init(allocator: *std.mem.Allocator) !os.pid_t {
 
     return tracee_pid;
 }
+
 pub fn main() !void {
     const allocator = std.heap.c_allocator;
     const tracee_pid = try init(allocator);
