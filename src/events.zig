@@ -30,7 +30,7 @@ pub const EventAction = enum {
 ///  the caller of next_event.
 pub const Context = struct {
     pid: os.pid_t,
-    registers: *c.user_regs_struct,
+    registers: c.user_regs_struct,
 };
 
 pub const TraceeMap = std.AutoHashMap(os.pid_t, Tracee);
@@ -69,7 +69,7 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os
     switch (tracee.state) {
         .RUNNING => {
             // Collect syscall arguments
-            ctx.registers.* = try ptrace.getregs(tracee.pid);
+            ctx.registers = try ptrace.getregs(tracee.pid);
 
             for (inspections) |sys_enum| {
                 if (ctx.registers.orig_rax == @enumToInt(sys_enum)) {
@@ -77,7 +77,7 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os
                 }
             }
 
-            try begin_syscall(tracee.pid, ctx.registers);
+            try begin_syscall(tracee.pid, &ctx.registers);
             tracee.state = .EXECUTING_CALL;
         },
         .EXECUTING_CALL => {
@@ -91,7 +91,7 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os
 /// TODO replace this with @suspend and resume in next_event and caller code respectively
 pub fn resume_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !void {
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, ctx.pid);
-    try begin_syscall(tracee.pid, ctx.registers);
+    try begin_syscall(tracee.pid, &ctx.registers);
     tracee.state = .EXECUTING_CALL;
 }
 
