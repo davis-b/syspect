@@ -120,13 +120,13 @@ fn end_syscall(pid: os.pid_t) !void {
 }
 
 pub fn get_or_make_tracee(tracee_map: *TraceeMap, pid: os.pid_t) !*Tracee {
-    if (tracee_map.get(pid)) |*value| {
-        return value;
+    if (tracee_map.get(pid)) |kv| {
+        return &kv.value;
     } else {
         const tracee = Tracee{ .pid = pid, .state = .RUNNING };
         _ = try tracee_map.put(pid, tracee);
-        if (tracee_map.get(pid)) |*value| {
-            return value;
+        if (tracee_map.get(pid)) |kv| {
+            return &kv.value;
         } else unreachable;
     }
     unreachable;

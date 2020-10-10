@@ -3,7 +3,7 @@ const os = std.os;
 
 const c = @import("c.zig");
 
-pub fn ptrace(request: c_int, pid: os.pid_t, addr: anytype, data: anytype) !c_long {
+pub fn ptrace(request: c_int, pid: os.pid_t, addr: var, data: var) !c_long {
     const result = ptraceInternal(request, pid, addr, data);
     if (result == -1) {
         const err = os.errno(result);
@@ -12,7 +12,7 @@ pub fn ptrace(request: c_int, pid: os.pid_t, addr: anytype, data: anytype) !c_lo
     return result;
 }
 
-fn ptraceInternal(request: c_int, pid: os.pid_t, addr: anytype, data: anytype) c_long {
+fn ptraceInternal(request: c_int, pid: os.pid_t, addr: var, data: var) c_long {
     const needs_addr_type: bool = @TypeOf(addr) == comptime_int;
     const needs_data_type: bool = @TypeOf(data) == comptime_int;
     const request_enum = @intToEnum(c.enum___ptrace_request, request);
