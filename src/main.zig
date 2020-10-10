@@ -69,33 +69,39 @@ pub fn main() !void {
     defer tracee_map.deinit();
     const tracee = try events.get_or_make_tracee(&tracee_map, tracee_pid);
 
-    var pid: os.pid_t = undefined;
-    var registers: c.user_regs_struct = undefined;
+    var context = events.Context{
+        .pid = undefined,
+        .registers = undefined,
+    };
+    const inspect_these = [_]os.SYS{
+        .connect,
+    };
+
     while (true) {
-        const action = try events.next_event(&tracee_map, &pid, &registers);
+        const action = try events.next_event(&tracee_map, &context, inspect_these[0..]);
         switch (action) {
             .CONT => continue,
             .EXIT => break,
-            .NORMAL => {},
+            .NORMAL => continue,
             .INSPECT => {
-                try redirectConnectCall(pid, registers);
-                try events.resume_from_inspection(&tracee_map, &pid, &registers);
+                try redirectConnectCall(context);
+                try events.resume_from_inspection(&tracee_map, &context);
             },
         }
     }
 }
 
 /// Modifies 'connect' syscalls to change the sockaddr struct in the tracee's memory
-fn redirectConnectCall(pid: os.pid_t, regs: c.user_regs_struct) !void {
+fn redirectConnectCall(context: events.Context) !void {
     // rsi register contains pointer to a sockaddr (connect syscall on x86_64)
-    const sockaddr_register_ptr = regs.rsi;
-    const sockaddr = try mem_rw.readSockaddr_PVReadv(pid, sockaddr_register_ptr);
+    const sockaddr_register_ptr = context.registers.rsi;
+    const sockaddr = try mem_rw.readSockaddr_PVReadv(context.pid, sockaddr_register_ptr);
 
     if (sockaddr.family != os.AF_INET and sockaddr.family != os.AF_INET6) {
         return;
     }
     var address = std.net.Address.initPosix(@alignCast(4, &sockaddr));
-    warn("[{}] connect( {} )\n", .{ pid, address });
+    warn("[{}] connect( {} )\n", .{ context.pid, address });
 
     var buffer = [_]u8{0} ** 20;
     const stdin = std.io.getStdIn();
@@ -126,7 +132,7 @@ fn redirectConnectCall(pid: os.pid_t, regs: c.user_regs_struct) !void {
         break;
     }
     warn("New address: {}\n", .{address});
-    try mem_rw.writeSockaddr_Ptrace(pid, sockaddr_register_ptr, address.any);
+    try mem_rw.writeSockaddr_Ptrace(context.pid, sockaddr_register_ptr, address.any);
 }
 
 /// Forks and initiates ptrace from the child program.

@@ -9,13 +9,6 @@ const WIFSTOPPED = waitpid_file.WIFSTOPPED;
 const ptrace = @import("ptrace.zig");
 const c = @import("c.zig");
 
-const EventAction = enum {
-    CONT,
-    EXIT,
-    NORMAL,
-    INSPECT,
-};
-
 const ProcState = enum {
     RUNNING,
     EXECUTING_CALL,
@@ -26,9 +19,23 @@ const Tracee = struct {
     state: ProcState,
 };
 
+pub const EventAction = enum {
+    CONT,
+    EXIT,
+    NORMAL,
+    INSPECT,
+};
+
+/// Used to encapsulate and share information to
+///  the caller of next_event.
+pub const Context = struct {
+    pid: os.pid_t,
+    registers: *c.user_regs_struct,
+};
+
 pub const TraceeMap = std.AutoHashMap(os.pid_t, Tracee);
 
-pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_regs_struct) !EventAction {
+pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os.SYS) !EventAction {
     const wr = waitpid(-1, 0) catch |err| {
         if (tracee_map.count() == 0) return EventAction.EXIT;
         return EventAction.CONT;
@@ -36,7 +43,7 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
 
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, wr.pid);
     std.debug.assert(tracee.pid == wr.pid);
-    pid.* = tracee.pid;
+    ctx.pid = tracee.pid;
 
     // Process exited normally
     if (os.WIFEXITED(wr.status)) {
@@ -62,11 +69,15 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
     switch (tracee.state) {
         .RUNNING => {
             // Collect syscall arguments
-            registers.* = try ptrace.getregs(tracee.pid);
+            ctx.registers.* = try ptrace.getregs(tracee.pid);
 
-            const inspect_this_call: bool = (registers.orig_rax == @enumToInt(os.SYS.connect));
-            if (inspect_this_call) return EventAction.INSPECT;
-            try begin_syscall(tracee.pid, registers);
+            for (inspections) |sys_enum| {
+                if (ctx.registers.orig_rax == @enumToInt(sys_enum)) {
+                    return EventAction.INSPECT;
+                }
+            }
+
+            try begin_syscall(tracee.pid, ctx.registers);
             tracee.state = .EXECUTING_CALL;
         },
         .EXECUTING_CALL => {
@@ -78,9 +89,9 @@ pub fn next_event(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_reg
 }
 
 /// TODO replace this with @suspend and resume in next_event and caller code respectively
-pub fn resume_from_inspection(tracee_map: *TraceeMap, pid: *os.pid_t, registers: *c.user_regs_struct) !void {
-    const tracee: *Tracee = try get_or_make_tracee(tracee_map, pid.*);
-    try begin_syscall(tracee.pid, registers);
+pub fn resume_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !void {
+    const tracee: *Tracee = try get_or_make_tracee(tracee_map, ctx.pid);
+    try begin_syscall(tracee.pid, ctx.registers);
     tracee.state = .EXECUTING_CALL;
 }
 
@@ -109,13 +120,13 @@ fn end_syscall(pid: os.pid_t) !void {
 }
 
 pub fn get_or_make_tracee(tracee_map: *TraceeMap, pid: os.pid_t) !*Tracee {
-    if (tracee_map.get(pid)) |kv| {
-        return &kv.value;
+    if (tracee_map.get(pid)) |*value| {
+        return value;
     } else {
         const tracee = Tracee{ .pid = pid, .state = .RUNNING };
         _ = try tracee_map.put(pid, tracee);
-        if (tracee_map.get(pid)) |kv| {
-            return &kv.value;
+        if (tracee_map.get(pid)) |*value| {
+            return value;
         } else unreachable;
     }
     unreachable;
