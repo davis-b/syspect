@@ -39,9 +39,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
     var target_argv = try allocator.alloc([]u8, os.argv.len - 1);
     defer allocator.free(target_argv);
     for (os.argv[1..os.argv.len]) |arg, index| {
-        var len: usize = 0;
-        while (arg[len] != 0) len += 1;
-        target_argv[index] = arg[0..len];
+        target_argv[index] = std.mem.span(arg);
     }
 
     try inspector.spawn_process(allocator, target_argv);
