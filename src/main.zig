@@ -72,12 +72,14 @@ pub fn main() !void {
         .pid = undefined,
         .registers = undefined,
     };
-    const inspect_these = [_]os.SYS{
-        .connect,
+    const inspect_these = events.Inspections{
+        .calls = &[_]os.SYS{
+            .connect,
+        },
     };
 
     while (true) {
-        const action = try events.next_event(&tracee_map, &context, inspect_these[0..]);
+        const action = try events.next_event(&tracee_map, &context, inspect_these);
         switch (action) {
             .CONT => continue,
             .EXIT => break,

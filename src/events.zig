@@ -34,7 +34,15 @@ pub const Context = struct {
 
 pub const TraceeMap = std.AutoHashMap(os.pid_t, Tracee);
 
-pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os.SYS) !EventAction {
+pub const Inspections = struct {
+    /// If inverse is true, any syscalls outside of .calls will be inspected
+    /// Inverse turns .calls into a do-not-inspect list.
+    inverse: bool = false,
+    /// Syscalls to be inspected
+    calls: []const os.SYS,
+};
+
+pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
     const wr = waitpid(-1, 0) catch |err| {
         if (tracee_map.count() == 0) return EventAction.EXIT;
         return EventAction.CONT;
@@ -70,8 +78,9 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os
             // Collect syscall arguments
             ctx.registers = try ptrace.getregs(tracee.pid);
 
-            for (inspections) |sys_enum| {
-                if (ctx.registers.orig_rax == @enumToInt(sys_enum)) {
+            for (inspections.calls) |syscall| {
+                // "!= inverse" causes bool to flip only when inverse is true
+                if ((ctx.registers.orig_rax == @enumToInt(syscall)) != inspections.inverse) {
                     return EventAction.INSPECT;
                 }
             }
