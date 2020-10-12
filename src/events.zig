@@ -138,7 +138,7 @@ pub fn get_or_make_tracee(tracee_map: *TraceeMap, pid: os.pid_t) !*Tracee {
         _ = try tracee_map.put(pid, tracee);
         if (tracee_map.get(pid)) |kv| {
             return &kv.value;
-        } else unreachable;
+        } else @panic("Very unexpected event. Could not get value we just placed in a hashmap");
     }
-    unreachable;
+    @panic("Very unexpected event. This should never happen");
 }
