@@ -2,13 +2,10 @@ const Builder = @import("std").build.Builder;
 const Mode = @import("builtin").Mode;
 
 pub fn build(b: *Builder) void {
-    //const mode = Mode.ReleaseFast;
     const mode = Mode.Debug;
 
-    const exe = b.addExecutable("tracer", "src/main.zig");
-
+    const exe = b.addExecutable("redirector", "src/example_redirector.zig");
     exe.setBuildMode(mode);
-    // exe.strip = true;
     exe.linkLibC();
     exe.install();
 
