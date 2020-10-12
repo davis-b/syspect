@@ -82,7 +82,6 @@ pub fn main() !void {
         switch (action) {
             .CONT => continue,
             .EXIT => break,
-            .NORMAL => continue,
             .INSPECT => {
                 try redirectConnectCall(context);
                 try events.resume_from_inspection(&tracee_map, &context);

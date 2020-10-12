@@ -22,7 +22,6 @@ const Tracee = struct {
 pub const EventAction = enum {
     CONT,
     EXIT,
-    NORMAL,
     INSPECT,
 };
 
@@ -62,7 +61,7 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os
         if (stopsig != 133) {
             warn("[{}] status: {}  stopsig: {} {}\n", .{ tracee.pid, wr.status, stopsig, stopsig & 0x80 });
             try ptrace.syscall(tracee.pid);
-            return EventAction.NORMAL;
+            return EventAction.CONT;
         }
     } else warn("[{}] wait no stop!\n", .{tracee.pid});
 
@@ -85,7 +84,7 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: []const os
             tracee.state = .RUNNING;
         },
     }
-    return EventAction.NORMAL;
+    return EventAction.CONT;
 }
 
 /// TODO replace this with @suspend and resume in next_event and caller code respectively
