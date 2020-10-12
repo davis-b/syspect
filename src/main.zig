@@ -39,7 +39,6 @@ fn init(allocator: *std.mem.Allocator) !os.pid_t {
         usage(os.argv[0]);
         os.exit(1);
     }
-    const our_name = os.argv[0];
 
     var target_argv = try allocator.alloc([]u8, os.argv.len - 1);
     defer allocator.free(target_argv);
