@@ -78,11 +78,9 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspection
             // Collect syscall arguments
             ctx.registers = try ptrace.getregs(tracee.pid);
 
-            for (inspections.calls) |syscall| {
-                // "!= inverse" causes bool to flip only when inverse is true
-                if ((ctx.registers.orig_rax == @enumToInt(syscall)) != inspections.inverse) {
-                    return EventAction.INSPECT;
-                }
+            // "!= inverse" causes bool to flip only when inverse is true
+            if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
+                return EventAction.INSPECT;
             }
 
             try begin_syscall(tracee.pid, &ctx.registers);
@@ -94,6 +92,13 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspection
         },
     }
     return EventAction.CONT;
+}
+
+fn in(needle: c_ulonglong, haystack: []const os.SYS) bool {
+    for (haystack) |hay| {
+        if (needle == @enumToInt(hay)) return true;
+    }
+    return false;
 }
 
 // TODO replace this with @suspend and resume in next_event and caller code respectively
