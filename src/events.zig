@@ -103,12 +103,18 @@ fn in(needle: c_ulonglong, haystack: []const os.SYS) bool {
 
 // TODO replace this with @suspend and resume in next_event and caller code respectively
 /// Must be called after next_event returns INSPECTION.
-/// If you would like to see the result of a syscall after INSPECTION,
-///  you would do so after calling this function.
 pub fn resume_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !void {
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, ctx.pid);
     try begin_syscall(tracee.pid, &ctx.registers);
+    // TODO see if switching the comment state on the following five lines of code
+    //  makes any difference.
+    // Specifically, if we are checking registers after an inspection.
+    //  Maybe we should return ptrace.getregs after ending the syscall?
     tracee.state = .EXECUTING_CALL;
+    // const wr = try waitpid(tracee.pid, 0);
+    // const registers = try ptrace.getregs(pid);
+    // try end_syscall(tracee.pid);
+    // return registers;
 }
 
 /// Tracee has stopped execution right before
