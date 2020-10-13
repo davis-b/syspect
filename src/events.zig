@@ -122,7 +122,6 @@ pub fn resume_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !void {
 /// Tracee has stopped execution right before
 ///  executing a syscall.
 fn begin_syscall(pid: os.pid_t, registers: *c.user_regs_struct) !void {
-    // print_call_info(pid, registers);
     //  Tracee will now conduct the syscall
     try ptrace.syscall(pid);
 }
@@ -136,9 +135,6 @@ fn print_call_info(pid: os.pid_t, registers: *c.user_regs_struct) void {
 /// Collect information and resume tracee
 fn end_syscall(pid: os.pid_t) !void {
     const registers = try ptrace.getregs(pid);
-
-    // warn("[{}] = {}\n", .{ pid, @intCast(c_long, registers.rax) });
-
     // Resume tracee
     try ptrace.syscall(pid);
 }
