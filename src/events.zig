@@ -110,6 +110,8 @@ pub fn resume_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !void {
     //  makes any difference.
     // Specifically, if we are checking registers after an inspection.
     //  Maybe we should return ptrace.getregs after ending the syscall?
+    // Alternatively, we could add a EventAction.INSPECT_RESULT value to the enum,
+    //  placing it before the end_syscall line in next_event().
     tracee.state = .EXECUTING_CALL;
     // const wr = try waitpid(tracee.pid, 0);
     // const registers = try ptrace.getregs(pid);
