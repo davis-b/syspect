@@ -55,7 +55,7 @@ pub fn writev(pid: os.pid_t, buffer: []u8, remote_addr: usize, read_len: usize) 
     const riovcnt: c_ulong = read_arr.len;
 
     const result = os.linux.syscall6(
-        os.SYS.process_vm_readv,
+        os.SYS.process_vm_writev,
         @intCast(usize, pid),
         @ptrToInt(&read_arr),
         liovcnt,
