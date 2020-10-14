@@ -4,11 +4,11 @@ const std = @import("std");
 const os = std.os;
 const warn = std.debug.warn;
 
-const syspect = @import("syspect.zig");
+const syspect = @import("syspect");
 
 /// Syscall only points to memory address, instead of directly containing values.
 /// To edit the ip/port, we need to edit the other process' memory.
-const mem_rw = @import("memory_rw.zig");
+const sockaddr_rw = @import("memory_rw_netaddress.zig");
 
 pub fn main() !void {
     const allocator = std.heap.c_allocator;
@@ -48,7 +48,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 fn redirectConnectCall(context: syspect.Context) !void {
     // rsi register contains pointer to a sockaddr (connect syscall on x86_64)
     const sockaddr_register_ptr = context.registers.rsi;
-    const sockaddr = try mem_rw.readSockaddr_PVReadv(context.pid, sockaddr_register_ptr);
+    const sockaddr = try sockaddr_rw.readSockaddr_PVReadv(context.pid, sockaddr_register_ptr);
 
     if (sockaddr.family != os.AF_INET and sockaddr.family != os.AF_INET6) {
         return;
@@ -85,5 +85,5 @@ fn redirectConnectCall(context: syspect.Context) !void {
         break;
     }
     warn("New address: {}\n", .{address});
-    try mem_rw.writeSockaddr_Ptrace(context.pid, sockaddr_register_ptr, address.any);
+    try sockaddr_rw.writeSockaddr_Ptrace(context.pid, sockaddr_register_ptr, address.any);
 }

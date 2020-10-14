@@ -4,7 +4,8 @@ const Mode = @import("builtin").Mode;
 pub fn build(b: *Builder) void {
     const mode = Mode.Debug;
 
-    const exe = b.addExecutable("redirector", "src/example_redirector.zig");
+    const exe = b.addExecutable("redirector", "src/examples/connect_redirector.zig");
+    exe.addPackagePath("syspect", "src/index.zig");
     exe.setBuildMode(mode);
     exe.linkLibC();
     exe.install();

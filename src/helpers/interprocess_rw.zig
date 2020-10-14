@@ -1,7 +1,13 @@
+// Code for reading and writing to other process address spaces
+// Uses process_vm_[readv, writev](2)
+
 const std = @import("std");
 const os = std.os;
 
-const c = @import("c.zig");
+const c = @cImport({
+    // process_vm_readv
+    @cInclude("sys/uio.h");
+});
 
 // From the man page:
 
@@ -10,6 +16,7 @@ const c = @import("c.zig");
 
 // The data is transferred to the locations specified by local_iov and liovcnt:
 // local_iov is a pointer to an array describing address ranges in the calling process,
+
 pub fn readv(pid: os.pid_t, buffer: []u8, remote_addr: usize, read_len: usize) !usize {
     var local_iov = c.iovec{ .iov_base = @ptrCast(*c_void, buffer), .iov_len = read_len };
     var remote_iov = c.iovec{ .iov_base = @intToPtr(*c_void, remote_addr), .iov_len = read_len };
@@ -25,10 +32,8 @@ pub fn readv(pid: os.pid_t, buffer: []u8, remote_addr: usize, read_len: usize) !
     const result = os.linux.syscall6(
         os.SYS.process_vm_readv,
         @intCast(usize, pid),
-        // @ptrToInt(&local_iov),
         @ptrToInt(&write_arr),
         liovcnt,
-        // @ptrToInt(&remote_iov),
         @ptrToInt(&read_arr),
         riovcnt,
         0,

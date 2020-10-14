@@ -5,9 +5,10 @@ const os = std.os;
 const mem = std.mem;
 const warn = std.debug.warn;
 
-const c = @import("c.zig");
-const process_vm = @import("process_vm.zig");
-const ptrace = @import("ptrace.zig").ptrace;
+const syspect = @import("syspect");
+const c = syspect.c;
+const process_vm = syspect.interprocess_rw;
+const ptrace = syspect.ptrace.ptrace;
 
 /// Reads memory from another process using process_vm_readv
 /// Returns os.sockaddr found at that memory location
