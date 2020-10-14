@@ -85,5 +85,5 @@ fn redirectConnectCall(context: syspect.Context) !void {
         break;
     }
     warn("New address: {}\n", .{address});
-    try sockaddr_rw.writeSockaddr_Ptrace(context.pid, sockaddr_register_ptr, address.any);
+    _ = try sockaddr_rw.writeSockaddr_PVWritev(context.pid, sockaddr_register_ptr, address.any);
 }

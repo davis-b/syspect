@@ -14,14 +14,14 @@ const ptrace = syspect.ptrace.ptrace;
 /// Returns os.sockaddr found at that memory location
 pub fn readSockaddr_PVReadv(pid: os.pid_t, ptr: usize) !os.sockaddr {
     var buffer = [_]u8{0} ** @sizeOf(os.sockaddr);
-    const vmreadv_result = try process_vm.readv(pid, buffer[0..], ptr, buffer.len);
+    const vmreadv_result = try process_vm.readv(pid, buffer[0..], ptr);
     const sockaddr = mem.bytesToValue(os.sockaddr, buffer[0..]);
     return sockaddr;
 }
 
-fn writeSockaddr_PVWritev(pid: os.pid_t, ptr: usize, sockaddr: os.sockaddr) !usize {
-    const buffer = mem.toBytes(sockaddr);
-    const written = try process_vm.writev(pid, buffer[0..], ptr, buffer.len);
+pub fn writeSockaddr_PVWritev(pid: os.pid_t, ptr: usize, sockaddr: os.sockaddr) !usize {
+    var buffer = mem.toBytes(sockaddr);
+    const written = try process_vm.writev(pid, buffer[0..], ptr);
     return written;
 }
 
