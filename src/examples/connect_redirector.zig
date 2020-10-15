@@ -22,7 +22,7 @@ pub fn main() !void {
 
     while (try inspector.next_syscall()) |*context| {
         try redirectConnectCall(context.*);
-        try inspector.finish_syscall(context);
+        try inspector.start_syscall(context.*);
     }
 }
 

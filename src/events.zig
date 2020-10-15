@@ -20,9 +20,13 @@ const Tracee = struct {
 };
 
 pub const EventAction = enum {
+    // Syscall was not made.
     CONT,
+    // All child processes died.
     EXIT,
     INSPECT,
+    // Syscall started or ended normally.
+    NORMAL,
 };
 
 /// Used to encapsulate and share information to
@@ -42,12 +46,18 @@ pub const Inspections = struct {
     calls: []const os.SYS,
 };
 
-pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
-    const wr = waitpid(-1, 0) catch |err| {
+pub fn next_event(pid: ?os.pid_t, tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
+    // This allows a caller to wait for the result of a syscall on a specific pid,
+    //  defaults to -1 (any pid available)
+    const waiton: os.pid_t = if (pid) |p| p else -1;
+    const wr = waitpid(waiton, 0) catch |err| {
         if (tracee_map.count() == 0) return EventAction.EXIT;
         return EventAction.CONT;
     };
+    return handle_event(wr, tracee_map, ctx, inspections);
+}
 
+pub fn handle_event(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, wr.pid);
     std.debug.assert(tracee.pid == wr.pid);
     ctx.pid = tracee.pid;
@@ -75,16 +85,19 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspection
 
     switch (tracee.state) {
         .RUNNING => {
-            // Collect syscall arguments
+            // Collect syscall arguments.
             ctx.registers = try ptrace.getregs(tracee.pid);
 
             if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
                 return EventAction.INSPECT;
             }
 
-            try begin_syscall(tracee, &ctx.registers);
+            try begin_syscall(tracee);
         },
         .EXECUTING_CALL => {
+            // Collect syscall result.
+            ctx.registers = try ptrace.getregs(tracee.pid);
+
             try end_syscall(tracee);
 
             // Would this feature be used, or just add bloat?
@@ -97,7 +110,7 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspection
             //     }
         },
     }
-    return EventAction.CONT;
+    return EventAction.NORMAL;
 }
 
 fn in(needle: c_ulonglong, haystack: []const os.SYS) bool {
@@ -107,38 +120,17 @@ fn in(needle: c_ulonglong, haystack: []const os.SYS) bool {
     return false;
 }
 
-// TODO replace this with @suspend and resume in next_event and caller code respectively
+// TODO replace this with @suspend and resume in handle_event and caller code respectively
 /// Must be called after next_event returns INSPECTION.
-/// Can only call this function or resume_and_finish_from_inspection for each inspection.
-/// Does not track the syscall's result.
-/// If you wish to see the result of the syscall, use resume_and_finish_from_inspection.
-pub fn resume_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !void {
-    const tracee: *Tracee = try get_or_make_tracee(tracee_map, ctx.pid);
-    try begin_syscall(tracee, &ctx.registers);
-}
-
-/// Must be called after next_event returns INSPECTION.
-/// Can only call this function or resume_from_inspection for each inspection.
-/// Blocks until the syscall has finished.
-/// Returns resulting registers from syscall.
-pub fn resume_and_finish_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !Context {
-    const tracee: *Tracee = try get_or_make_tracee(tracee_map, ctx.pid);
-    try begin_syscall(tracee, &ctx.registers);
-
-    // When this blocking code returns, it means
-    //  the tracee has finished the syscall.
-    const wr = try waitpid(tracee.pid, 0);
-    // We then collect the registers
-    const registers = try ptrace.getregs(pid);
-    //  and resume the tracee.
-    try end_syscall(tracee.pid);
-    // Finally, we return the registers from the finished syscall
-    return Context{ .pid = tracee.pid, .registers = registers };
+/// Executes the system call, as would normally happen in handle_event() with non-inspected calls.
+pub fn resume_from_inspection(tracee_map: *TraceeMap, pid: os.pid_t) !void {
+    const tracee: *Tracee = try get_or_make_tracee(tracee_map, pid);
+    try begin_syscall(tracee);
 }
 
 /// Tracee has stopped execution right before
 ///  executing a syscall.
-fn begin_syscall(tracee: *Tracee, registers: *c.user_regs_struct) !void {
+fn begin_syscall(tracee: *Tracee) !void {
     //  Tracee will now conduct the syscall
     try ptrace.syscall(tracee.pid);
     tracee.state = .EXECUTING_CALL;

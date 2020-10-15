@@ -22,16 +22,30 @@ pub const Options = struct {
 ///     var inspector = syspect.Inspector.init(allocator, options, &[_]os.SYS{ .connect });
 ///     defer inspector.deinit();
 ///
+///     // Note that disregard_results and block_until_syscall_finishes are mere examples of how one
+///     //  might use Inspector. Normally you would use one path or the other depending on your program.
 ///     while (try inspector.next_syscall()) |*context| {
 ///         warn("{} attempting syscall with registers {}\n", .{context.pid, context.registers});
 ///         // work with registers or process here [...]
-///         inspector.finish_syscall(context);
+///         if (disregard_results) {
+///             inspector.start_syscall(context);
+///         }
+///         // We want to inspect the result of the syscall
+///         else if (block_until_syscall_finishes) {
+///             const maybe_registers = try inspector.start_syscall(context);
+///             if (maybe_registers) |regs| {
+///                 warn("syscall result: {}\n", .{regs});
+///             }
+///         } else {
+///             @panic("One of the above two options must be called to conclude the next_syscall function.");
+///         }
 ///     }
 pub const Inspector = struct {
     syscalls: []const os.SYS,
     multithread: bool,
     inverse: bool,
     tracee_map: events.TraceeMap,
+    has_tracees: bool,
 
     pub fn init(allocator: *std.mem.Allocator, options: Options, syscalls: []const os.SYS) Inspector {
         return Inspector{
@@ -39,6 +53,7 @@ pub const Inspector = struct {
             .multithread = options.multithread,
             .inverse = options.inverse,
             .tracee_map = events.TraceeMap.init(allocator),
+            .has_tracees = false,
         };
     }
 
@@ -56,6 +71,7 @@ pub const Inspector = struct {
         _ = try ptrace.ptrace(c.PTRACE_SETOPTIONS, tracee_pid, 0, opts);
 
         _ = try events.get_or_make_tracee(&self.tracee_map, tracee_pid);
+        self.has_tracees = true;
 
         // Resume/Set off tracee
         _ = try ptrace.syscall(tracee_pid);
@@ -63,17 +79,20 @@ pub const Inspector = struct {
 
     pub fn attach_to_process(self: *Inspector, pid: os.pid_t) !void {
         @compileLog("Not yet implemented");
+        // self.has_tracees = true;
     }
 
     pub fn next_syscall(self: *Inspector) !?events.Context {
+        if (!self.has_tracees) return null;
+
         var context = events.Context{
             .pid = undefined,
             .registers = undefined,
         };
         while (true) {
-            const action = try events.next_event(&self.tracee_map, &context, .{ .inverse = self.inverse, .calls = self.syscalls });
+            const action = try events.next_event(null, &self.tracee_map, &context, .{ .inverse = self.inverse, .calls = self.syscalls });
             switch (action) {
-                .CONT => continue,
+                .CONT, .NORMAL => continue,
                 .EXIT => return null,
                 .INSPECT => {
                     return context;
@@ -83,9 +102,25 @@ pub const Inspector = struct {
     }
 
     /// Executes a syscall that has been inspected.
+    pub fn start_syscall(self: *Inspector, context: events.Context) !void {
+        try events.resume_from_inspection(&self.tracee_map, context.pid);
+    }
+
+    /// Executes a syscall that has been inspected and waits for syscall to finish.
     /// Updates context.registers with new result.
-    pub fn finish_syscall(self: *Inspector, context: *events.Context) !void {
-        try events.resume_from_inspection(&self.tracee_map, context);
+    pub fn start_and_finish_syscall(self: *Inspector, context: events.Context) !?c.user_regs_struct {
+        try self.start_syscall(context);
+        var new_ctx = context;
+        const action = try events.next_event(context.pid, &self.tracee_map, &new_ctx, .{ .inverse = self.inverse, .calls = self.syscalls });
+        switch (action) {
+            .CONT => return null,
+            .EXIT => {
+                self.has_tracees = false;
+                return null;
+            },
+            .INSPECT => @panic("This should not occur. Inspecting a call that should be finished"),
+            .NORMAL => return new_ctx.registers,
+        }
     }
 };
 

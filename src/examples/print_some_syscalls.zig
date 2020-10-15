@@ -25,8 +25,9 @@ pub fn main() !void {
     defer inspector.deinit();
 
     while (try inspector.next_syscall()) |*context| {
-        print_info(context.*);
-        try inspector.finish_syscall(context);
+        if (try inspector.start_and_finish_syscall(context.*)) |registers| {
+            print_info(context.*, registers);
+        }
     }
 }
 
@@ -50,11 +51,12 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 }
 
 /// Prints the system call name and its first four arguments
-fn print_info(context: syspect.Context) void {
+fn print_info(context: syspect.Context, result: syspect.c.user_regs_struct) void {
     warn("{} ( ", .{@tagName(@intToEnum(os.SYS, context.registers.orig_rax))});
     warn("{}, ", .{context.registers.rdi});
     warn("{}, ", .{context.registers.rsi});
     warn("{}, ", .{context.registers.rdx});
     warn("{}", .{context.registers.r10});
-    warn(" )\n", .{});
+    warn(" ) = ", .{});
+    warn("{}\n", .{@intCast(isize, result.rax)});
 }
