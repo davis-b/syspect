@@ -18,7 +18,7 @@ pub fn main() !void {
         .access,
     };
     // Setting inverse to true changes how Inspector itneracts with ignore_list.
-    // Usually, the os.SYS list passed in would be the inspected syscalls.
+    // Usually, list of syscalls passed in would be the inspected syscalls.
     // When inversed, everything outside of the list is inspected, and the list items are ignored.
     var inspector = syspect.Inspector.init(allocator, .{ .inverse = true }, ignore_list);
     try init(allocator, &inspector);
