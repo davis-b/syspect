@@ -78,7 +78,6 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspection
             // Collect syscall arguments
             ctx.registers = try ptrace.getregs(tracee.pid);
 
-            // "!= inverse" causes bool to flip only when inverse is true
             if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
                 return EventAction.INSPECT;
             }
@@ -89,6 +88,15 @@ pub fn next_event(tracee_map: *TraceeMap, ctx: *Context, inspections: Inspection
         .EXECUTING_CALL => {
             try end_syscall(tracee.pid);
             tracee.state = .RUNNING;
+
+            // Would this feature be used, or just add bloat?
+            // Its purpose would be to allow resume_from_inspection to see inspect syscall results.
+            // We would bypass the blocking nature of resume_and_finish_from_inspection,
+            //  however, it would require the caller to do pid management.
+            // When would it ever be used? What is a good use case for this feature?
+            //     if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
+            //         return EventAction.INSPECT_RESULT;
+            //     }
         },
     }
     return EventAction.CONT;
@@ -103,20 +111,32 @@ fn in(needle: c_ulonglong, haystack: []const os.SYS) bool {
 
 // TODO replace this with @suspend and resume in next_event and caller code respectively
 /// Must be called after next_event returns INSPECTION.
+/// Can only call this function or resume_and_finish_from_inspection for each inspection.
+/// Does not track the syscall's result.
+/// If you wish to see the result of the syscall, use resume_and_finish_from_inspection.
 pub fn resume_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !void {
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, ctx.pid);
     try begin_syscall(tracee.pid, &ctx.registers);
-    // TODO see if switching the comment state on the following five lines of code
-    //  makes any difference.
-    // Specifically, if we are checking registers after an inspection.
-    //  Maybe we should return ptrace.getregs after ending the syscall?
-    // Alternatively, we could add a EventAction.INSPECT_RESULT value to the enum,
-    //  placing it before the end_syscall line in next_event().
     tracee.state = .EXECUTING_CALL;
-    // const wr = try waitpid(tracee.pid, 0);
-    // const registers = try ptrace.getregs(pid);
-    // try end_syscall(tracee.pid);
-    // return registers;
+}
+
+/// Must be called after next_event returns INSPECTION.
+/// Can only call this function or resume_from_inspection for each inspection.
+/// Blocks until the syscall has finished.
+/// Returns resulting registers from syscall.
+pub fn resume_and_finish_from_inspection(tracee_map: *TraceeMap, ctx: *Context) !Context {
+    const tracee: *Tracee = try get_or_make_tracee(tracee_map, ctx.pid);
+    try begin_syscall(tracee.pid, &ctx.registers);
+
+    // When this blocking code returns, it means
+    //  the tracee has finished the syscall.
+    const wr = try waitpid(tracee.pid, 0);
+    // We then collect the registers
+    const registers = try ptrace.getregs(pid);
+    //  and resume the tracee.
+    try end_syscall(tracee.pid);
+    // Finally, we return the registers from the finished syscall
+    return Context{ .pid = tracee.pid, .registers = registers };
 }
 
 /// Tracee has stopped execution right before
@@ -132,9 +152,7 @@ fn print_call_info(pid: os.pid_t, registers: *c.user_regs_struct) void {
 }
 
 /// Tracee has finished its syscall
-/// Collect information and resume tracee
 fn end_syscall(pid: os.pid_t) !void {
-    const registers = try ptrace.getregs(pid);
     // Resume tracee
     try ptrace.syscall(pid);
 }
