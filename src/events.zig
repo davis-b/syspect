@@ -57,6 +57,24 @@ pub fn next_event(pid: ?os.pid_t, tracee_map: *TraceeMap, ctx: *Context, inspect
     return handle_event(wr, tracee_map, ctx, inspections);
 }
 
+// TODO
+// Fix issue in multithreaded/multiprocess environment where program stalls
+// Known states of occurrance:
+
+// status: 7295, stopsig: 28, 0
+// ? status: 4991, stopsig: 19, 0
+// ? status: 198015, stopsig: 5, 0
+
+// status: 66943  stopsig: 5 0
+// status: 4991  stopsig: 19 0
+
+// pid 2: inspect clone
+// pid 2: status: 66943  stopsig: 5 0
+// pid 2: clone
+// pid 3: status: 4991  stopsig: 19 0
+// pid 3: clone
+// pid 2: inspect wait4
+// Program stall
 pub fn handle_event(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, wr.pid);
     std.debug.assert(tracee.pid == wr.pid);
@@ -64,7 +82,7 @@ pub fn handle_event(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *C
 
     // Process exited normally
     if (os.WIFEXITED(wr.status)) {
-        // warn("exit status: {}\n", .{os.WEXITSTATUS(wr.status)});
+        warn("exit status: {}\n", .{os.WEXITSTATUS(wr.status)});
         _ = tracee_map.remove(tracee.pid);
         return if (tracee_map.count() == 0) .EXIT else .CONT;
     }
@@ -78,6 +96,9 @@ pub fn handle_event(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *C
         const stopsig = os.WSTOPSIG(wr.status);
         if (stopsig != 133) {
             warn("[{}] status: {}  stopsig: {} {}\n", .{ tracee.pid, wr.status, stopsig, stopsig & 0x80 });
+            const regs = try ptrace.getregs(tracee.pid);
+            const n = @tagName(@intToEnum(os.SYS, regs.orig_rax));
+            warn("[{}] {}\n", .{ tracee.pid, n });
             try ptrace.syscall(tracee.pid);
             return EventAction.CONT;
         }
