@@ -6,8 +6,9 @@ const waitpid_file = @import("waitpid.zig");
 const waitpid = waitpid_file.waitpid;
 const WIFSTOPPED = waitpid_file.WIFSTOPPED;
 
-const ptrace = @import("ptrace.zig");
-const c = @import("c.zig");
+const index = @import("index.zig");
+const ptrace = index.ptrace;
+const c = index.c;
 
 const ProcState = enum {
     RUNNING,

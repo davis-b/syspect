@@ -5,8 +5,9 @@
 const std = @import("std");
 const os = std.os;
 
-const ptrace = @import("ptrace.zig");
-const c = @import("c.zig");
+const index = @import("index.zig");
+const ptrace = index.ptrace;
+const c = index.c;
 const events = @import("events.zig");
 
 pub const Context = events.Context;
