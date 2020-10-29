@@ -55,28 +55,10 @@ pub fn next_event(pid: ?os.pid_t, tracee_map: *TraceeMap, ctx: *Context, inspect
         if (tracee_map.count() == 0) return EventAction.EXIT;
         return EventAction.CONT;
     };
-    return handle_event(wr, tracee_map, ctx, inspections);
+    return try handle_wait_result(wr, tracee_map, ctx, inspections);
 }
 
-// TODO
-// Fix issue in multithreaded/multiprocess environment where program stalls
-// Known states of occurrance:
-
-// status: 7295, stopsig: 28, 0
-// ? status: 4991, stopsig: 19, 0
-// ? status: 198015, stopsig: 5, 0
-
-// status: 66943  stopsig: 5 0
-// status: 4991  stopsig: 19 0
-
-// pid 2: inspect clone
-// pid 2: status: 66943  stopsig: 5 0
-// pid 2: clone
-// pid 3: status: 4991  stopsig: 19 0
-// pid 3: clone
-// pid 2: inspect wait4
-// Program stall
-pub fn handle_event(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
+pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, wr.pid);
     std.debug.assert(tracee.pid == wr.pid);
     ctx.pid = tracee.pid;
@@ -84,33 +66,37 @@ pub fn handle_event(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *C
     switch (wr.status) {
         // Process exited normally
         .exit => |signal| {
-            warn("exit signal: {}\n", .{signal});
+            warn("> exit signal: {}\n", .{signal});
             _ = tracee_map.remove(tracee.pid);
             return if (tracee_map.count() == 0) .EXIT else .CONT;
         },
         .kill => |signal| {
-            warn("kill signal: {}\n", .{signal});
+            warn("> kill signal: {}\n", .{signal});
             _ = tracee_map.remove(tracee.pid);
             return if (tracee_map.count() == 0) .EXIT else .CONT;
         },
+        // Process was stopped by the delivery of a signal
         .stop => |signal| {
 
-            // If we get stopped for a non-syscall event.
-            // We want to keep our state tracking in sync with reality.
-            // Thus we return early to maintain our current SYSCALL state.
-            // TODO audit this code, ensure it is acting as we would like
-            // Child process was stopped by the delivery of a signal
+            // TODO
+            // * audit this code, ensure it is acting as we would like
+            // * replace magic number (133) with a named number from authoritative source.
+            //    Is signal(133) the signal we get when ptrace pauses (specific signal for syscall, or general ptrace signal)?
             if (signal != 133) {
-                warn("[{}] status: {}  signal: {} {}\n", .{ tracee.pid, wr.status, signal, signal & 0x80 });
                 const regs = try ptrace.getregs(tracee.pid);
                 const n = @tagName(@intToEnum(os.SYS, regs.orig_rax));
-                warn("[{}] {}\n", .{ tracee.pid, n });
+                warn("> [{}] has received signal {}\n", .{ tracee.pid, signal });
+                warn("> [{}] status: {}  signal: {} {}\n", .{ tracee.pid, wr.status, signal, signal & 0x80 });
+                warn("> Resuming process without changing tracee state.\n", .{});
                 try ptrace.syscall(tracee.pid);
                 return EventAction.CONT;
             }
         },
     }
+    return try handle_event(tracee, tracee_map, ctx, inspections);
+}
 
+pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
     switch (tracee.state) {
         .RUNNING => {
             // Collect syscall arguments.
