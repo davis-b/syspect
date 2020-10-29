@@ -109,6 +109,7 @@ pub const Inspector = struct {
 
     /// Executes a syscall that has been inspected and waits for syscall to finish.
     /// Updates context.registers with new result.
+    /// If result is null, program has concluded.
     pub fn start_and_finish_syscall(self: *Inspector, context: events.Context) !?c.user_regs_struct {
         try self.start_syscall(context);
         var new_ctx = context;
