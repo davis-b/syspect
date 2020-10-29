@@ -35,7 +35,7 @@ pub fn WIFSTOPPED(wstatus: u32) bool {
     return (wstatus & 0xff) == 0x7f;
 }
 
-fn interpret_status(wstatus: u32) !Status {
+pub fn interpret_status(wstatus: u32) !Status {
     if (os.WIFEXITED(wstatus)) {
         return Status{ .exit = os.WEXITSTATUS(wstatus) };
     } else if (os.WIFSIGNALED(wstatus)) {
