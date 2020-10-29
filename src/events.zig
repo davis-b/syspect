@@ -81,29 +81,35 @@ pub fn handle_event(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, ctx: *C
     std.debug.assert(tracee.pid == wr.pid);
     ctx.pid = tracee.pid;
 
-    // Process exited normally
-    if (os.WIFEXITED(wr.status)) {
-        warn("exit status: {}\n", .{os.WEXITSTATUS(wr.status)});
-        _ = tracee_map.remove(tracee.pid);
-        return if (tracee_map.count() == 0) .EXIT else .CONT;
-    }
+    switch (wr.status) {
+        // Process exited normally
+        .exit => |signal| {
+            warn("exit signal: {}\n", .{signal});
+            _ = tracee_map.remove(tracee.pid);
+            return if (tracee_map.count() == 0) .EXIT else .CONT;
+        },
+        .kill => |signal| {
+            warn("kill signal: {}\n", .{signal});
+            _ = tracee_map.remove(tracee.pid);
+            return if (tracee_map.count() == 0) .EXIT else .CONT;
+        },
+        .stop => |signal| {
 
-    // If we get stopped for a non-syscall event.
-    // We want to keep our state tracking in sync with reality.
-    // Thus we return early to maintain our current SYSCALL state.
-    // TODO audit this code, ensure it is acting as we would like
-    // Child process was stopped by the delivery of a signal
-    if (WIFSTOPPED(@intCast(c_int, wr.status))) {
-        const stopsig = os.WSTOPSIG(wr.status);
-        if (stopsig != 133) {
-            warn("[{}] status: {}  stopsig: {} {}\n", .{ tracee.pid, wr.status, stopsig, stopsig & 0x80 });
-            const regs = try ptrace.getregs(tracee.pid);
-            const n = @tagName(@intToEnum(os.SYS, regs.orig_rax));
-            warn("[{}] {}\n", .{ tracee.pid, n });
-            try ptrace.syscall(tracee.pid);
-            return EventAction.CONT;
-        }
-    } else warn("[{}] wait no stop!\n", .{tracee.pid});
+            // If we get stopped for a non-syscall event.
+            // We want to keep our state tracking in sync with reality.
+            // Thus we return early to maintain our current SYSCALL state.
+            // TODO audit this code, ensure it is acting as we would like
+            // Child process was stopped by the delivery of a signal
+            if (signal != 133) {
+                warn("[{}] status: {}  signal: {} {}\n", .{ tracee.pid, wr.status, signal, signal & 0x80 });
+                const regs = try ptrace.getregs(tracee.pid);
+                const n = @tagName(@intToEnum(os.SYS, regs.orig_rax));
+                warn("[{}] {}\n", .{ tracee.pid, n });
+                try ptrace.syscall(tracee.pid);
+                return EventAction.CONT;
+            }
+        },
+    }
 
     switch (tracee.state) {
         .RUNNING => {

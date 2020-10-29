@@ -3,7 +3,13 @@ const os = std.os;
 
 pub const WaitResult = struct {
     pid: os.pid_t,
-    status: u32,
+    status: Status,
+};
+
+pub const Status = union(enum) {
+    exit: u32,
+    kill: u32,
+    stop: u32,
 };
 
 pub fn waitpid(pid: os.pid_t, flags: u32) !WaitResult {
@@ -20,10 +26,23 @@ pub fn waitpid(pid: os.pid_t, flags: u32) !WaitResult {
             },
         }
     }
-    return WaitResult{ .pid = @intCast(os.pid_t, pid_from_wait), .status = status };
+    return WaitResult{ .pid = @intCast(os.pid_t, pid_from_wait), .status = try interpret_status(status) };
 }
 
-// using this because os.WIFSTOPPED resulted in @intCast truncation errors
-pub fn WIFSTOPPED(status: c_int) bool {
-    return (status & 0xff) == 0x7f;
+// Using this because os.WIFSTOPPED resulted in @intCast truncation errors
+// Function taken from /usr/include/x86_64-linux-gnu/bits/waitstatus.h
+pub fn WIFSTOPPED(wstatus: u32) bool {
+    return (wstatus & 0xff) == 0x7f;
+}
+
+fn interpret_status(wstatus: u32) !Status {
+    if (os.WIFEXITED(wstatus)) {
+        return Status{ .exit = os.WEXITSTATUS(wstatus) };
+    } else if (os.WIFSIGNALED(wstatus)) {
+        return Status{ .kill = os.WTERMSIG(wstatus) };
+    } else if (WIFSTOPPED(wstatus)) {
+        return Status{ .stop = os.WSTOPSIG(wstatus) };
+    }
+    return error.UnrecognizedStatus;
+    // os.WIFCONTINUED does not exist in x86_64-linux zig std library. We will try ignoring it for now.
 }
