@@ -66,12 +66,12 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
     switch (wr.status) {
         // Process exited normally
         .exit => |signal| {
-            warn("> exit signal: {}\n", .{signal});
+            warn("> {} exit signal: {}\n", .{ tracee.pid, signal });
             _ = tracee_map.remove(tracee.pid);
             return if (tracee_map.count() == 0) .EXIT else .CONT;
         },
         .kill => |signal| {
-            warn("> kill signal: {}\n", .{signal});
+            warn("> {} kill signal: {}\n", .{ tracee.pid, signal });
             _ = tracee_map.remove(tracee.pid);
             return if (tracee_map.count() == 0) .EXIT else .CONT;
         },
