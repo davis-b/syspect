@@ -10,14 +10,6 @@ const index = @import("index.zig");
 const ptrace = index.ptrace;
 const c = index.c;
 
-// Taken from /usr/include/x86_64-linux-gnu/asm/signal.h
-const SIGTRAP = 5;
-// Signal delivered on syscalls. Would be a regular SIGTRAP
-//  if we do not set PTRACE_O_TRACESYSGOOD.
-// Therefore, it is important that users of this module
-//  ensure that option has been set.
-const PTRACE_SIGTRAP = SIGTRAP | 0x80;
-
 const ProcState = enum {
     RUNNING,
     EXECUTING_CALL,
@@ -85,10 +77,9 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
         },
         // Process was stopped by the delivery of a signal
         .stop => |signal| {
-            if (signal != PTRACE_SIGTRAP) {
-                warn("> [{}] has received signal {}\n", .{ tracee.pid, signal });
-                warn("> [{}] status: {}\n", .{ tracee.pid, wr.status });
-                warn("> Resuming process without changing tracee state.\n", .{});
+            if (signal != .ptrace_trap) {
+                warn("> [{}] has received signal {} - status: {}\n", .{ tracee.pid, signal, wr.status });
+                warn("> [{}] Resuming process without changing tracee state\n", .{tracee.pid});
                 try ptrace.syscall(tracee.pid);
                 return EventAction.CONT;
             }

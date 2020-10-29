@@ -9,7 +9,52 @@ pub const WaitResult = struct {
 pub const Status = union(enum) {
     exit: u32,
     kill: u32,
-    stop: u32,
+    stop: Signal,
+};
+
+// Signal delivered on syscalls.
+// Would otherwise be a regular SIGTRAP if the caller does not set PTRACE_O_TRACESYSGOOD.
+// It is important that users of the "events.zig" code ensure that option has been set.
+//  The "events.zig" code will only be treating SIGTRAP and PTRACE_SIGTRAP differently.
+const PTRACE_SIGTRAP = os.SIGTRAP | 0x80;
+
+const Signal = extern enum {
+    hup = os.SIGHUP,
+    int = os.SIGINT,
+    quit = os.SIGQUIT,
+    ill = os.SIGILL,
+    trap = os.SIGTRAP,
+    abrt = os.SIGABRT,
+    iot = os.SIGIOT,
+    bus = os.SIGBUS,
+    fpe = os.SIGFPE,
+    kill = os.SIGKILL,
+    usr1 = os.SIGUSR1,
+    segv = os.SIGSEGV,
+    usr2 = os.SIGUSR2,
+    pipe = os.SIGPIPE,
+    alrm = os.SIGALRM,
+    term = os.SIGTERM,
+    stkflt = os.SIGSTKFLT,
+    chld = os.SIGCHLD,
+    cont = os.SIGCONT,
+    stop = os.SIGSTOP,
+    tstp = os.SIGTSTP,
+    ttin = os.SIGTTIN,
+    ttou = os.SIGTTOU,
+    urg = os.SIGURG,
+    xcpu = os.SIGXCPU,
+    xfsz = os.SIGXFSZ,
+    vtalrm = os.SIGVTALRM,
+    prof = os.SIGPROF,
+    winch = os.SIGWINCH,
+    io = os.SIGIO,
+    poll = os.SIGPOLL,
+    pwr = os.SIGPWR,
+    sys = os.SIGSYS,
+    unused = os.SIGUNUSED,
+
+    ptrace_trap = os.SIGTRAP | 0x80,
 };
 
 pub fn waitpid(pid: os.pid_t, flags: u32) !WaitResult {
@@ -41,7 +86,8 @@ pub fn interpret_status(wstatus: u32) !Status {
     } else if (os.WIFSIGNALED(wstatus)) {
         return Status{ .kill = os.WTERMSIG(wstatus) };
     } else if (WIFSTOPPED(wstatus)) {
-        return Status{ .stop = os.WSTOPSIG(wstatus) };
+        const signal = @intToEnum(Signal, @intCast(c_int, os.WSTOPSIG(wstatus)));
+        return Status{ .stop = signal };
     }
     @panic("Unrecognized status. 'interpret_status' fn not finished.");
     // return error.UnrecognizedStatus;
