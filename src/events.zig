@@ -78,7 +78,7 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
         // Process was stopped by the delivery of a signal
         .stop => |signal| {
             if (signal != .ptrace_trap) {
-                warn("> [{}] has received signal {} - status: {}\n", .{ tracee.pid, signal, wr.status });
+                warn("> [{}] has received signal {}\n", .{ tracee.pid, signal });
                 warn("> [{}] Resuming process without changing tracee state\n", .{tracee.pid});
                 try ptrace.syscall(tracee.pid);
                 return EventAction.CONT;
