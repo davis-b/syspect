@@ -113,15 +113,26 @@ pub const Inspector = struct {
     pub fn start_and_finish_syscall(self: *Inspector, context: events.Context) !?c.user_regs_struct {
         try self.start_syscall(context);
         var new_ctx = context;
-        const action = try events.next_event(context.pid, &self.tracee_map, &new_ctx, .{ .inverse = self.inverse, .calls = self.syscalls });
-        switch (action) {
-            .CONT => return null,
-            .EXIT => {
-                self.has_tracees = false;
-                return null;
-            },
-            .INSPECT => @panic("This should not occur. Inspecting a call that should be finished"),
-            .NORMAL => return new_ctx.registers,
+
+        while (true) {
+            const action = try events.next_event(context.pid, &self.tracee_map, &new_ctx, .{ .inverse = self.inverse, .calls = self.syscalls });
+            switch (action) {
+                .CONT => {
+                    // If tracee exists, it must have had an unexpected stop that did not kill the process.
+                    // Therefore, we want to wait for the next event again until it is the event we expected.
+                    if (self.tracee_map.get(context.pid)) |_| {
+                        continue;
+                    }
+                    // Otherwise, the traced process is dead.
+                    return null;
+                },
+                .EXIT => {
+                    self.has_tracees = false;
+                    return null;
+                },
+                .INSPECT => @panic("This should not occur. Inspecting a call that should be finished"),
+                .NORMAL => return new_ctx.registers,
+            }
         }
     }
 };
