@@ -43,6 +43,7 @@ fn interpret_status(wstatus: u32) !Status {
     } else if (WIFSTOPPED(wstatus)) {
         return Status{ .stop = os.WSTOPSIG(wstatus) };
     }
-    return error.UnrecognizedStatus;
+    @panic("Unrecognized status. 'interpret_status' fn not finished.");
+    // return error.UnrecognizedStatus;
     // os.WIFCONTINUED does not exist in x86_64-linux zig std library. We will try ignoring it for now.
 }
