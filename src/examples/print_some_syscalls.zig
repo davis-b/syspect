@@ -30,6 +30,7 @@ pub fn main() !void {
         if (try inspector.start_and_finish_syscall(context.*)) |registers| {
             print_info(context.*, registers);
         }
+        warn("[{}] finished {}\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.orig_rax)) });
     }
 }
 
