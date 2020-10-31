@@ -75,19 +75,29 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
             _ = tracee_map.remove(tracee.pid);
             return if (tracee_map.count() == 0) .EXIT else .CONT;
         },
-        // Process was stopped by the delivery of a signal
-        .stop => |signal| {
+
+        // Ptrace has stopped the process
+        .ptrace => |signal| {
             switch (signal) {
-                .ptrace_trap => {
+                .syscall_trap => {
+                    // Continue through to the typical next step
                     return try handle_event(tracee, tracee_map, ctx, inspections);
                 },
                 else => {
-                    warn("> [{}] has received signal {}\n", .{ tracee.pid, signal });
+                    warn("> [{}] has received PTRACE signal {}\n", .{ tracee.pid, signal });
                     warn("> [{}] Resuming process without changing tracee state\n", .{tracee.pid});
                     try ptrace.syscall(tracee.pid);
                     return EventAction.CONT;
                 },
             }
+        },
+
+        // Process was stopped by the delivery of a signal
+        .stop => |signal| {
+            warn("> [{}] has received signal {}\n", .{ tracee.pid, signal });
+            warn("> [{}] Resuming process without changing tracee state\n", .{tracee.pid});
+            try ptrace.syscall(tracee.pid);
+            return EventAction.CONT;
         },
     }
 }

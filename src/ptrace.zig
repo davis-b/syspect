@@ -3,6 +3,16 @@ const os = std.os;
 
 const c = @import("c.zig");
 
+pub const Event = extern enum {
+    clone = c.PTRACE_EVENT_CLONE,
+    exec = c.PTRACE_EVENT_EXEC,
+    exit = c.PTRACE_EVENT_EXIT,
+    fork = c.PTRACE_EVENT_FORK,
+    vfork = c.PTRACE_EVENT_VFORK,
+    vfork_done = c.PTRACE_EVENT_VFORK_DONE,
+    seccomp = c.PTRACE_EVENT_SECCOMP,
+};
+
 pub fn ptrace(request: c_int, pid: os.pid_t, addr: var, data: var) !c_long {
     const result = ptraceInternal(request, pid, addr, data);
     if (result == -1) {

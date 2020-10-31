@@ -1,6 +1,8 @@
 const std = @import("std");
 const os = std.os;
 
+const ptrace = @import("ptrace.zig");
+
 pub const WaitResult = struct {
     pid: os.pid_t,
     status: Status,
@@ -10,6 +12,7 @@ pub const Status = union(enum) {
     exit: u32,
     kill: u32,
     stop: Signal,
+    ptrace: PtraceSignal,
 };
 
 // Signal delivered on syscalls.
@@ -53,8 +56,36 @@ const Signal = extern enum {
     pwr = os.SIGPWR,
     sys = os.SIGSYS,
     unused = os.SIGUNUSED,
+};
 
-    ptrace_trap = os.SIGTRAP | 0x80,
+const PTRACE_TRAP = os.SIGTRAP | 0x80;
+const PtraceSignal = enum {
+    // ptrace events
+    e_clone,
+    e_exec,
+    e_exit,
+    e_fork,
+    e_vfork,
+    e_vfork_done,
+    e_seccomp,
+
+    // Trap only applies when PTRACE_O_TRACESYSGOOD flag has been set.
+    // Otherwise, wait result will return a normal SIGTRAP result.
+    syscall_trap,
+
+    pub fn fromWstatus(wstatus: u32) ?PtraceSignal {
+        if (@intCast(c_int, os.WSTOPSIG(wstatus)) == PTRACE_TRAP) return PtraceSignal.syscall_trap;
+        return switch (wstatus >> 8) {
+            (os.SIGTRAP | (@enumToInt(ptrace.Event.clone) << 8)) => PtraceSignal.e_clone,
+            (os.SIGTRAP | (@enumToInt(ptrace.Event.exec) << 8)) => PtraceSignal.e_exec,
+            (os.SIGTRAP | (@enumToInt(ptrace.Event.exit) << 8)) => PtraceSignal.e_exit,
+            (os.SIGTRAP | (@enumToInt(ptrace.Event.fork) << 8)) => PtraceSignal.e_fork,
+            (os.SIGTRAP | (@enumToInt(ptrace.Event.vfork) << 8)) => PtraceSignal.e_vfork,
+            (os.SIGTRAP | (@enumToInt(ptrace.Event.vfork_done) << 8)) => PtraceSignal.e_vfork_done,
+            (os.SIGTRAP | (@enumToInt(ptrace.Event.seccomp) << 8)) => PtraceSignal.e_seccomp,
+            else => null,
+        };
+    }
 };
 
 pub fn waitpid(pid: os.pid_t, flags: u32) !WaitResult {
@@ -86,6 +117,9 @@ pub fn interpret_status(wstatus: u32) !Status {
     } else if (os.WIFSIGNALED(wstatus)) {
         return Status{ .kill = os.WTERMSIG(wstatus) };
     } else if (WIFSTOPPED(wstatus)) {
+        if (PtraceSignal.fromWstatus(wstatus)) |psignal| {
+            return Status{ .ptrace = psignal };
+        }
         const signal = @intToEnum(Signal, @intCast(c_int, os.WSTOPSIG(wstatus)));
         return Status{ .stop = signal };
     }
