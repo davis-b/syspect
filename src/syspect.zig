@@ -33,7 +33,7 @@ pub const Options = struct {
 ///         }
 ///         // We want to inspect the result of the syscall
 ///         else if (block_until_syscall_finishes) {
-///             const maybe_registers = try inspector.start_syscall(context);
+///             const maybe_registers = try inspector.start_and_finish_syscall(context);
 ///             if (maybe_registers) |regs| {
 ///                 warn("syscall result: {}\n", .{regs});
 ///             }
