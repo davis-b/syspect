@@ -20,28 +20,33 @@ pub const Options = struct {
 /// Intercepts syscalls, filtering them as the caller sees fit.
 /// Expected use:
 ///
-///     var inspector = syspect.Inspector.init(allocator, options, &[_]os.SYS{ .connect });
+///     var inspector = syspect.Inspector.init(allocator, options, &[_]os.SYS{.connect});
 ///     defer inspector.deinit();
 ///
-///     const target_argv = &[_][]const u8{"program to run", "arg for program"};
+///     const target_argv = &[_][]const u8{ "program to run", "arg for program" };
 ///     _ = try inspector.spawn_process(allocator, target_argv);
 ///
-///     // Note that disregard_results and block_until_syscall_finishes are mere examples of how one
-///     //  might use Inspector. Normally you would use one path or the other depending on your program.
-///     while (try inspector.next_syscall()) |*context| {
-///         warn("{} attempting syscall with registers {}\n", .{context.pid, context.registers});
-///         // work with registers or process here [...]
-///         if (disregard_results) {
-///             inspector.start_syscall(context);
-///         }
-///         // We want to inspect the result of the syscall
-///         else if (block_until_syscall_finishes) {
-///             const maybe_registers = try inspector.start_and_finish_syscall(context);
-///             if (maybe_registers) |regs| {
-///                 warn("syscall result: {}\n", .{regs});
-///             }
-///         } else {
-///             @panic("One of the above two options must be called to conclude the next_syscall function.");
+///     while (try inspector.next_syscall()) |*syscall| {
+///         switch (syscall.*) {
+///             .pre_call => |context| {
+///                 warn("{} attempting syscall with registers {}\n", .{ context.pid, context.registers });
+///
+///                 can_modify_registers_here(context);
+///
+///                 if (do_not_want_block) {
+///                     inspector.start_syscall(context);
+///                 } else if (block_until_syscall_finishes) {
+///                     const maybe_registers = try inspector.start_and_finish_syscall(context);
+///                     if (maybe_registers) |regs| {
+///                         warn("Syscall result: {}\n", .{regs});
+///                     }
+///                 } else {
+///                     @compileError("One of (start_syscall, start_and_finish_syscall_blocking) must be called to conclude the next_syscall function.");
+///                 }
+///             },
+///             .post_call => |context| {
+///                 warn("Syscall result: {}\n", .{context.registers});
+///             },
 ///         }
 ///     }
 pub const Inspector = struct {
@@ -50,6 +55,11 @@ pub const Inspector = struct {
     inverse: bool,
     tracee_map: events.TraceeMap,
     has_tracees: bool,
+
+    pub const SyscallContext = union(enum) {
+        pre_call: Context,
+        post_call: Context,
+    };
 
     pub fn init(allocator: *std.mem.Allocator, options: Options, syscalls: []const os.SYS) Inspector {
         return Inspector{
@@ -68,9 +78,8 @@ pub const Inspector = struct {
     pub fn spawn_process(self: *Inspector, allocator: *std.mem.Allocator, argv: []const []const u8) !os.pid_t {
         const tracee_pid = try fork_spawn_process(allocator, argv);
 
-        var opts = c.PTRACE_O_EXITKILL;
-        // TODO Further research these two options
-        opts |= c.PTRACE_O_TRACESYSGOOD | c.PTRACE_O_TRACEEXEC;
+        var opts = c.PTRACE_O_EXITKILL | c.PTRACE_O_TRACESYSGOOD;
+        opts |= c.PTRACE_O_TRACEEXEC;
         if (self.multithread) opts |= c.PTRACE_O_TRACEFORK | c.PTRACE_O_TRACECLONE;
         _ = try ptrace.ptrace(c.PTRACE_SETOPTIONS, tracee_pid, 0, opts);
 
@@ -88,7 +97,7 @@ pub const Inspector = struct {
         // self.has_tracees = true;
     }
 
-    pub fn next_syscall(self: *Inspector) !?events.Context {
+    pub fn next_syscall(self: *Inspector) !?SyscallContext {
         if (!self.has_tracees) return null;
 
         var context = events.Context{
@@ -101,7 +110,10 @@ pub const Inspector = struct {
                 .CONT, .NORMAL => continue,
                 .EXIT => return null,
                 .INSPECT => {
-                    return context;
+                    return SyscallContext{ .pre_call = context };
+                },
+                .INSPECT_RESULT => {
+                    return SyscallContext{ .post_call = context };
                 },
             }
         }
@@ -137,8 +149,11 @@ pub const Inspector = struct {
                     self.has_tracees = false;
                     return null;
                 },
+                // NORMAL action means a non-inspected syscall has started or ended.
+                // Is this even possible while we're in the middle of a different syscall?
+                .NORMAL => continue,
                 .INSPECT => @panic("This should not occur. Inspecting a call that should be finished"),
-                .NORMAL => return new_ctx.registers,
+                .INSPECT_RESULT => return new_ctx.registers,
             }
         }
     }

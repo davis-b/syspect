@@ -25,7 +25,10 @@ pub const EventAction = enum {
     CONT,
     // All child processes died.
     EXIT,
+    // Syscall may be inspected and *should be resumed*.
     INSPECT,
+    // Syscall has finished, results may be inspected.
+    INSPECT_RESULT,
     // Syscall started or ended normally.
     NORMAL,
 };
@@ -121,14 +124,10 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
 
             try end_syscall(tracee);
 
-            // Would this feature be used, or just add bloat?
-            // Its purpose would be to allow resume_from_inspection to see inspect syscall results.
-            // We would bypass the blocking nature of resume_and_finish_from_inspection,
-            //  however, it would require the caller to do pid management.
-            // When would it ever be used? What is a good use case for this feature?
-            //     if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
-            //         return EventAction.INSPECT_RESULT;
-            //     }
+            // Allows inspecting syscall results without resorting to blocking.
+            if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
+                return EventAction.INSPECT_RESULT;
+            }
         },
     }
     return EventAction.NORMAL;

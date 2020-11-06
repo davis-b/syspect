@@ -20,9 +20,14 @@ pub fn main() !void {
     try init(allocator, &inspector);
     defer inspector.deinit();
 
-    while (try inspector.next_syscall()) |*context| {
-        try redirectConnectCall(context.*);
-        try inspector.start_syscall(context.*);
+    while (try inspector.next_syscall()) |*syscall| {
+        switch (syscall.*) {
+            .pre_call => |context| {
+                try redirectConnectCall(context);
+                try inspector.start_syscall(context);
+            },
+            .post_call => {},
+        }
     }
 }
 

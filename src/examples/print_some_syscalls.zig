@@ -16,33 +16,29 @@ pub fn main() !void {
         .munmap,
         .brk,
         .access,
-        // .clone,
     };
     // Setting inverse to true changes how Inspector itneracts with ignore_list.
     // Usually, list of syscalls passed in would be the inspected syscalls.
     // When inversed, everything outside of the list is inspected, and the list items are ignored.
 
-    // var inspector = syspect.Inspector.init(allocator, .{ .inverse = true }, ignore_list);
-
-    const calls = &[_]os.SYS{
-        .getpid,
-        .fork,
-        .clone,
-    };
-    var inspector = syspect.Inspector.init(allocator, .{ .inverse = false }, calls);
+    var inspector = syspect.Inspector.init(allocator, .{ .inverse = true }, ignore_list);
 
     try init(allocator, &inspector);
     defer inspector.deinit();
 
-    while (try inspector.next_syscall()) |*context| {
-        warn("[{}] starting {}\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.orig_rax)) });
-        // @compileError("Issue resides in start_and_finish_syscall code. No issue in just start_syscall code");
-        if (try inspector.start_and_finish_syscall(context.*)) |registers| {
-            print_info(context.*, registers);
+    // What if strace doesn't print which one starts first, but which one finishes first?
+    while (try inspector.next_syscall()) |*syscall| {
+        switch (syscall.*) {
+            .pre_call => |context| {
+                warn("[{}] starting {}\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.orig_rax)) });
+                try inspector.start_syscall(context);
+            },
+            .post_call => |context| {
+                // Make sure registers are set to calling values here, otherwise we need to split print_info to a start and a finish section
+                print_info(context);
+                warn("[{}] finished {}\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.orig_rax)) });
+            },
         }
-        // try inspector.start_syscall(context.*);
-        warn("[{}] finished {}\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.orig_rax)) });
-        warn("\n", .{});
     }
 }
 
@@ -66,7 +62,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 }
 
 /// Prints the system call name and its first four arguments
-fn print_info(context: syspect.Context, result: syspect.c.user_regs_struct) void {
+fn print_info(context: syspect.Context) void {
     warn("[{}] ", .{context.pid});
     warn("{} ( ", .{@tagName(@intToEnum(os.SYS, context.registers.orig_rax))});
     warn("{}, ", .{context.registers.rdi});
@@ -74,5 +70,5 @@ fn print_info(context: syspect.Context, result: syspect.c.user_regs_struct) void
     warn("{}, ", .{context.registers.rdx});
     warn("{}", .{context.registers.r10});
     warn(" ) = ", .{});
-    warn("{}\n", .{@intCast(isize, result.rax)});
+    warn("{}\n", .{@intCast(isize, context.registers.rax)});
 }
