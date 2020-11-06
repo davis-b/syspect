@@ -62,7 +62,7 @@ pub const Inspector = struct {
         self.tracee_map.deinit();
     }
 
-    pub fn spawn_process(self: *Inspector, allocator: *std.mem.Allocator, argv: [][]const u8) !void {
+    pub fn spawn_process(self: *Inspector, allocator: *std.mem.Allocator, argv: []const []const u8) !void {
         const tracee_pid = try fork_spawn_process(allocator, argv);
 
         var opts = c.PTRACE_O_EXITKILL;
