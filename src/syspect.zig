@@ -112,10 +112,12 @@ pub const Inspector = struct {
         try events.resume_from_inspection(&self.tracee_map, context.pid);
     }
 
+    /// This will block while trying to finish the syscall.
+    /// Make sure you are only using this method on non-blocking syscalls.
     /// Executes a syscall that has been inspected and waits for syscall to finish.
     /// Updates context.registers with new result.
     /// If result is null, program has concluded.
-    pub fn start_and_finish_syscall(self: *Inspector, context: events.Context) !?c.user_regs_struct {
+    pub fn start_and_finish_syscall_blocking(self: *Inspector, context: events.Context) !?c.user_regs_struct {
         try self.start_syscall(context);
         var new_ctx = context;
 
