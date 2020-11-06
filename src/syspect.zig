@@ -142,7 +142,8 @@ pub const Inspector = struct {
 /// Parent syncs with child, and then returns the child's PID
 fn fork_spawn_process(allocator: *std.mem.Allocator, argv: []const []const u8) !os.pid_t {
     const child_pid = try os.fork();
-    const envmap = try std.process.getEnvMap(allocator);
+    var envmap = try std.process.getEnvMap(allocator);
+    defer envmap.deinit();
     switch (child_pid) {
         -1 => return error.UnknownForkingError,
         // child process
