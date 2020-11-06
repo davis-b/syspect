@@ -84,14 +84,11 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
                     return try handle_event(tracee, tracee_map, ctx, inspections);
                 },
                 else => {
-                    // TODO Examine this more
+                    // We have received a PTRACE event.
+                    // We want to continue the process as normal and ignore the event.
                     warn("> [{}] has received PTRACE signal {}\n", .{ tracee.pid, signal });
-                    //return try handle_event(tracee, tracee_map, ctx, inspections);
-                    // try ptrace.syscall(tracee.pid);
-                    // Setting registers here does not do anything when Syspect looks at a syscall's beginning and end registers.
-                    // ctx.registers = try ptrace.getregs(tracee.pid);
-                    try end_syscall(tracee);
-                    return EventAction.NORMAL;
+                    try ptrace.syscall(tracee.pid);
+                    return EventAction.CONT;
                 },
             }
         },
