@@ -163,11 +163,6 @@ fn end_syscall(tracee: *Tracee) !void {
     tracee.state = .RUNNING;
 }
 
-fn print_call_info(pid: os.pid_t, registers: *c.user_regs_struct) void {
-    const call_name = @tagName(@intToEnum(os.SYS, registers.orig_rax));
-    warn("[{}] {}() \n", .{ pid, call_name });
-}
-
 pub fn get_or_make_tracee(tracee_map: *TraceeMap, pid: os.pid_t) !*Tracee {
     if (tracee_map.get(pid)) |kv| {
         return &kv.value;
