@@ -42,7 +42,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
         target_argv[index] = std.mem.span(arg);
     }
 
-    try inspector.spawn_process(allocator, target_argv);
+    _ = try inspector.spawn_process(allocator, target_argv);
 }
 
 fn redirectConnectCall(context: syspect.Context) !void {

@@ -23,6 +23,9 @@ pub const Options = struct {
 ///     var inspector = syspect.Inspector.init(allocator, options, &[_]os.SYS{ .connect });
 ///     defer inspector.deinit();
 ///
+///     const target_argv = &[_][]const u8{"program to run", "arg for program"};
+///     _ = try inspector.spawn_process(allocator, target_argv);
+///
 ///     // Note that disregard_results and block_until_syscall_finishes are mere examples of how one
 ///     //  might use Inspector. Normally you would use one path or the other depending on your program.
 ///     while (try inspector.next_syscall()) |*context| {
@@ -62,7 +65,7 @@ pub const Inspector = struct {
         self.tracee_map.deinit();
     }
 
-    pub fn spawn_process(self: *Inspector, allocator: *std.mem.Allocator, argv: []const []const u8) !void {
+    pub fn spawn_process(self: *Inspector, allocator: *std.mem.Allocator, argv: []const []const u8) !os.pid_t {
         const tracee_pid = try fork_spawn_process(allocator, argv);
 
         var opts = c.PTRACE_O_EXITKILL;
@@ -76,6 +79,8 @@ pub const Inspector = struct {
 
         // Resume/Set off tracee
         _ = try ptrace.syscall(tracee_pid);
+
+        return tracee_pid;
     }
 
     pub fn attach_to_process(self: *Inspector, pid: os.pid_t) !void {
