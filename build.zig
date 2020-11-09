@@ -6,8 +6,8 @@ pub fn build(b: *Builder) void {
     const mode = Mode.Debug;
 
     const examples = .{
-        .{ "redirector", "src/examples/connect_redirector.zig" },
-        .{ "mini-strace", "src/examples/print_some_syscalls.zig" },
+        .{ "redirector", "src/examples/connect_redirector/main.zig" },
+        .{ "print_some_syscalls", "src/examples/print_some_syscalls.zig" },
     };
 
     inline for (examples) |i| {
