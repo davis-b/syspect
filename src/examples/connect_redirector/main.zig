@@ -16,7 +16,7 @@ pub fn main() !void {
     const syscalls = &[_]os.SYS{
         .connect,
     };
-    var inspector = syspect.Inspector.init(allocator, .{}, syscalls);
+    var inspector = syspect.Inspector.init(allocator, syscalls, .{});
     try init(allocator, &inspector);
     defer inspector.deinit();
 

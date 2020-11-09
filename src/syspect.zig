@@ -20,7 +20,7 @@ pub const Options = struct {
 /// Intercepts syscalls, filtering them as the caller sees fit.
 /// Expected use:
 ///
-///     var inspector = syspect.Inspector.init(allocator, options, &[_]os.SYS{.connect});
+///     var inspector = syspect.Inspector.init(allocator, &[_]os.SYS{.connect, .read, .write}, options);
 ///     defer inspector.deinit();
 ///
 ///     const target_argv = &[_][]const u8{ "program to run", "arg for program" };
@@ -61,7 +61,7 @@ pub const Inspector = struct {
         post_call: Context,
     };
 
-    pub fn init(allocator: *std.mem.Allocator, options: Options, syscalls: []const os.SYS) Inspector {
+    pub fn init(allocator: *std.mem.Allocator, syscalls: []const os.SYS, options: Options) Inspector {
         return Inspector{
             .syscalls = syscalls,
             .multithread = options.multithread,
