@@ -26,20 +26,28 @@ pub fn main() !void {
     try init(allocator, &inspector);
     defer inspector.deinit();
 
-    // What if strace doesn't print which one starts first, but which one finishes first?
     while (try inspector.next_syscall()) |*syscall| {
         switch (syscall.*) {
             .pre_call => |context| {
-                warn("[{}] starting {}\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.orig_rax)) });
+                warn("[{}] starting {}\n", .{ context.pid, enumName(context.registers.orig_rax) });
                 try inspector.start_syscall(context);
             },
             .post_call => |context| {
-                // Make sure registers are set to calling values here, otherwise we need to split print_info to a start and a finish section
+                // Arguments may not be accurate, syscall return value will be accurate.
+                // Argument registers may have been changed between the initial call and this point in time.
+                // Unless the system resets registers to their state at the initial call? Seems unlikely.
                 print_info(context);
-                warn("[{}] finished {}\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.orig_rax)) });
+                warn("[{}] finished {}\n", .{ context.pid, enumName(context.registers.orig_rax) });
             },
         }
     }
+}
+
+fn enumName(int: var) []const u8 {
+    inline for (std.meta.fields(os.SYS)) |f| {
+        if (int == f.value) return f.name;
+    }
+    return "???";
 }
 
 fn usage(our_name: [*:0]u8) void {
@@ -64,7 +72,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 /// Prints the system call name and its first four arguments
 fn print_info(context: syspect.Context) void {
     warn("[{}] ", .{context.pid});
-    warn("{} ( ", .{@tagName(@intToEnum(os.SYS, context.registers.orig_rax))});
+    warn("{} ( ", .{enumName(context.registers.orig_rax)});
     warn("{}, ", .{context.registers.rdi});
     warn("{}, ", .{context.registers.rsi});
     warn("{}, ", .{context.registers.rdx});
