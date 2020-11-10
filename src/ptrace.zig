@@ -35,6 +35,7 @@ fn ptraceInternal(request: c_int, pid: os.pid_t, addr: var, data: var) c_long {
 fn processErrorNumber(err: u16) !void {
     switch (err) {
         os.ESRCH => return error.NoSuchProcess,
+        os.EPERM => return error.OperationNotPermitted,
         else => {
             std.debug.warn("Error number \"{}\"; ", .{err});
             std.debug.warn("Unknown error\n", .{});
