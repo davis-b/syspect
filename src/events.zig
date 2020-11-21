@@ -98,8 +98,7 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
 
         // Process was stopped by the delivery of a signal
         .stop => |signal| {
-            warn("> [{}] has received signal {}\n", .{ tracee.pid, signal });
-            warn("> [{}] Resuming process without changing tracee state\n", .{tracee.pid});
+            warn("> [{}] has received linux signal {}\n", .{ tracee.pid, signal });
             try ptrace.syscall(tracee.pid);
             return EventAction.CONT;
         },
