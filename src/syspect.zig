@@ -9,6 +9,7 @@ const index = @import("index.zig");
 const ptrace = index.ptrace;
 const c = index.c;
 const events = @import("events.zig");
+const waitpid = @import("waitpid.zig").waitpid;
 
 pub const Context = events.Context;
 
@@ -78,10 +79,7 @@ pub const Inspector = struct {
     pub fn spawn_process(self: *Inspector, allocator: *std.mem.Allocator, argv: []const []const u8) !os.pid_t {
         const tracee_pid = try fork_spawn_process(allocator, argv);
 
-        var opts = c.PTRACE_O_EXITKILL | c.PTRACE_O_TRACESYSGOOD;
-        opts |= c.PTRACE_O_TRACEEXEC;
-        if (self.multithread) opts |= c.PTRACE_O_TRACEFORK | c.PTRACE_O_TRACECLONE;
-        _ = try ptrace.ptrace(c.PTRACE_SETOPTIONS, tracee_pid, 0, opts);
+        try self.set_ptrace_options(tracee_pid);
 
         _ = try events.get_or_make_tracee(&self.tracee_map, tracee_pid);
         self.has_tracees = true;
@@ -92,9 +90,38 @@ pub const Inspector = struct {
         return tracee_pid;
     }
 
+    fn set_ptrace_options(self: *Inspector, tracee_pid: os.pid_t) !void {
+        var opts = c.PTRACE_O_EXITKILL | c.PTRACE_O_TRACESYSGOOD;
+        opts |= c.PTRACE_O_TRACEEXEC;
+        if (self.multithread) opts |= c.PTRACE_O_TRACEFORK | c.PTRACE_O_TRACECLONE;
+        _ = try ptrace.ptrace(c.PTRACE_SETOPTIONS, tracee_pid, 0, opts);
+    }
+
+    /// Attach to a running process, setting it as our tracee
     pub fn attach_to_process(self: *Inspector, pid: os.pid_t) !void {
-        @compileLog("Not yet implemented");
-        // self.has_tracees = true;
+        // Try to attach
+        _ = try ptrace.ptrace(c.PTRACE_ATTACH, pid, 0, 0);
+
+        // Wait for tracee to receive STOPSIG
+        const wait_result = try waitpid(pid, 0);
+
+        try self.set_ptrace_options(pid);
+
+        // Ensure we are at the spot we're expecting.
+        switch (wait_result.status) {
+            .stop => |signal| {
+                switch (signal) {
+                    .stop => {},
+                    else => return error.PtraceAttachError,
+                }
+            },
+            else => return error.PtraceAttachError,
+        }
+
+        // Resume/Set off tracee
+        _ = try ptrace.syscall(pid);
+
+        self.has_tracees = true;
     }
 
     pub fn next_syscall(self: *Inspector) !?SyscallContext {

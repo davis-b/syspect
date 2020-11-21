@@ -60,13 +60,27 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
         os.exit(1);
     }
 
-    var target_argv = try allocator.alloc([]u8, os.argv.len - 1);
-    defer allocator.free(target_argv);
-    for (os.argv[1..os.argv.len]) |arg, index| {
-        target_argv[index] = std.mem.span(arg);
-    }
+    const maybe_pid: ?os.pid_t = std.fmt.parseInt(os.pid_t, std.mem.span(os.argv[1]), 10) catch null;
+    if (maybe_pid) |pid| {
+        inspector.attach_to_process(pid) catch |err| {
+            switch (err) {
+                error.OperationNotPermitted => {
+                    warn("Operation not permitted. Usually caused by insufficient privileges. Try running the program as sudo!\n", .{});
+                    os.exit(1);
+                },
+                else => return err,
+            }
+        };
+        warn("Attached to pid: {}\n", .{pid});
+    } else {
+        var target_argv = try allocator.alloc([]u8, os.argv.len - 1);
+        defer allocator.free(target_argv);
+        for (os.argv[1..os.argv.len]) |arg, index| {
+            target_argv[index] = std.mem.span(arg);
+        }
 
-    _ = try inspector.spawn_process(allocator, target_argv);
+        _ = try inspector.spawn_process(allocator, target_argv);
+    }
 }
 
 /// Prints the system call name and its first four arguments
