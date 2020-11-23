@@ -47,6 +47,8 @@ pub const Options = struct {
 ///             },
 ///             .post_call => |context| {
 ///                 warn("Syscall result: {}\n", .{context.registers});
+///                 // Tracee is paused after finishing the syscall. Resume it here.
+///                 inspector.resume_tracee(context)
 ///             },
 ///         }
 ///     }
@@ -150,6 +152,11 @@ pub const Inspector = struct {
     /// Executes a syscall that has been inspected.
     pub fn start_syscall(self: *Inspector, pid: os.pid_t) !void {
         try events.resume_from_inspection(&self.tracee_map, pid);
+    }
+
+    /// Resumes Tracee after a syscall finishes.
+    pub fn resume_tracee(self: *Inspector, pid: os.pid_t) !void {
+        try events.resume_from_inspection_result(&self.tracee_map, pid);
     }
 
     /// This will block while trying to finish the syscall.

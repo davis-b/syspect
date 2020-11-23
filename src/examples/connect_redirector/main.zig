@@ -26,7 +26,9 @@ pub fn main() !void {
                 try redirectConnectCall(context);
                 try inspector.start_syscall(context.pid);
             },
-            .post_call => {},
+            .post_call => |context| {
+                try inspector.resume_tracee(context.pid);
+            },
         }
     }
 }

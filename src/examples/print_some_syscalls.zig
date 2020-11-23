@@ -38,6 +38,7 @@ pub fn main() !void {
                 // Unless the system resets registers to their state at the initial call? Seems unlikely.
                 print_info(context);
                 warn("[{}] finished {}\n", .{ context.pid, enumName(context.registers.orig_rax) });
+                try inspector.resume_tracee(context.pid);
             },
         }
     }
