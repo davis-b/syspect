@@ -131,6 +131,7 @@ pub const Inspector = struct {
             .pid = undefined,
             .registers = undefined,
         };
+
         while (true) {
             const action = try events.next_event(null, &self.tracee_map, &context, .{ .inverse = self.inverse, .calls = self.syscalls });
             switch (action) {
@@ -147,8 +148,8 @@ pub const Inspector = struct {
     }
 
     /// Executes a syscall that has been inspected.
-    pub fn start_syscall(self: *Inspector, context: events.Context) !void {
-        try events.resume_from_inspection(&self.tracee_map, context.pid);
+    pub fn start_syscall(self: *Inspector, pid: os.pid_t) !void {
+        try events.resume_from_inspection(&self.tracee_map, pid);
     }
 
     /// This will block while trying to finish the syscall.

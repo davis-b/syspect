@@ -30,7 +30,7 @@ pub fn main() !void {
         switch (syscall.*) {
             .pre_call => |context| {
                 warn("[{}] starting {}\n", .{ context.pid, enumName(context.registers.orig_rax) });
-                try inspector.start_syscall(context);
+                try inspector.start_syscall(context.pid);
             },
             .post_call => |context| {
                 // Arguments may not be accurate, syscall return value will be accurate.
