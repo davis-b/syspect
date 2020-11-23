@@ -126,6 +126,16 @@ pub const Inspector = struct {
         self.has_tracees = true;
     }
 
+    /// Relinquishes ptrace control of the pid.
+    /// Tracee must be in ptrace-stop state when calling this function.
+    /// Tracee will be in a ptrace-stop state when next_syscall returns.
+    pub fn detach_from_process(self: *Inspector, pid: os.pid_t) !void {
+        _ = try ptrace.ptrace(c.PTRACE_DETACH, pid, 0, 0);
+        // TODO:
+        // Detect tracee state, if it is not in a prace-stop state,
+        //  send a signal in order to move it to the required state.
+    }
+
     pub fn next_syscall(self: *Inspector) !?SyscallContext {
         if (!self.has_tracees) return null;
 
