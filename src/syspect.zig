@@ -175,7 +175,7 @@ pub const Inspector = struct {
     /// Updates context.registers with new result.
     /// If result is null, program has concluded.
     pub fn start_and_finish_syscall_blocking(self: *Inspector, context: events.Context) !?c.user_regs_struct {
-        try self.start_syscall(context);
+        try self.start_syscall(context.pid);
         var new_ctx = context;
 
         while (true) {
