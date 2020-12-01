@@ -72,6 +72,7 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
             warn("> {} exit signal: {}\n", .{ tracee.pid, signal });
             return handle_dying_process(tracee, tracee_map);
         },
+        // Process was terminated by a signal
         .kill => |signal| {
             warn("> {} kill signal: {}\n", .{ tracee.pid, signal });
             return handle_dying_process(tracee, tracee_map);
@@ -103,7 +104,6 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
                 .quit => {
                     warn("> {} quit signal\n", .{tracee.pid});
                     // Is this neccessary to be called?
-                    // If so, should it be called for all dying processes?
                     try ptrace.syscall(tracee.pid);
                     return handle_dying_process(tracee, tracee_map);
                 },
