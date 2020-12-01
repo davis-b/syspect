@@ -49,7 +49,7 @@ pub fn main() !void {
                 // Unless the system resets registers to their state at the initial call? Seems unlikely.
                 print_info(context);
                 const pid_name = processName(allocator, &pid_name_cache, context.pid);
-                warn("[{} - {}] finished {}\n", .{ context.pid, pid_name, enumName(context.registers.orig_rax) });
+                warn("[{} - {}] finished {}\n\n", .{ context.pid, pid_name, enumName(context.registers.orig_rax) });
                 try inspector.resume_tracee(context.pid);
             },
         }
