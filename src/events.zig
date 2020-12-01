@@ -70,13 +70,11 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
         // Process exited normally
         .exit => |signal| {
             warn("> {} exit signal: {}\n", .{ tracee.pid, signal });
-            _ = tracee_map.remove(tracee.pid);
-            return if (tracee_map.count() == 0) .EXIT else .CONT;
+            return handle_dying_process(tracee, tracee_map);
         },
         .kill => |signal| {
             warn("> {} kill signal: {}\n", .{ tracee.pid, signal });
-            _ = tracee_map.remove(tracee.pid);
-            return if (tracee_map.count() == 0) .EXIT else .CONT;
+            return handle_dying_process(tracee, tracee_map);
         },
 
         // Ptrace has stopped the process
@@ -86,6 +84,7 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
                     // Continue through to the typical next step
                     return try handle_event(tracee, tracee_map, ctx, inspections);
                 },
+                // Is there any scenario where we receive this event and the tracee survives? Should we check for that?
                 else => {
                     // We have received a PTRACE event.
                     // We want to continue the process as normal and ignore the event.
@@ -99,10 +98,27 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
         // Process was stopped by the delivery of a signal
         .stop => |signal| {
             warn("> [{}] has received linux signal {}\n", .{ tracee.pid, signal });
-            try ptrace.syscall(tracee.pid);
-            return EventAction.CONT;
+
+            switch (signal) {
+                .quit => {
+                    warn("> {} quit signal\n", .{tracee.pid});
+                    // Is this neccessary to be called?
+                    // If so, should it be called for all dying processes?
+                    try ptrace.syscall(tracee.pid);
+                    return handle_dying_process(tracee, tracee_map);
+                },
+                else => {
+                    try ptrace.syscall(tracee.pid);
+                    return EventAction.CONT;
+                },
+            }
         },
     }
+}
+
+fn handle_dying_process(tracee: *Tracee, tracee_map: *TraceeMap) EventAction {
+    _ = tracee_map.remove(tracee.pid);
+    return if (tracee_map.count() == 0) .EXIT else .CONT;
 }
 
 pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, inspections: Inspections) !EventAction {
