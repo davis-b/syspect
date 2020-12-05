@@ -1,9 +1,10 @@
 const std = @import("std");
 const Builder = std.build.Builder;
 const Mode = @import("builtin").Mode;
+const root = @import("root");
 
 pub fn build(b: *Builder) void {
-    const mode = Mode.Debug;
+    const mode = b.standardReleaseOptions();
 
     const examples = .{
         .{ "redirector", "src/examples/connect_redirector/main.zig" },
@@ -17,23 +18,4 @@ pub fn build(b: *Builder) void {
         exe.linkLibC();
         exe.install();
     }
-
-    const test_step = b.step("test", "Run library tests");
-
-    const tests = [_][]const u8{
-        "src/tests/test_events.zig",
-    };
-
-    inline for (tests) |path| {
-        var t = b.addTest(path);
-        addPackages(b, t);
-        t.setBuildMode(mode);
-        test_step.dependOn(&t.step);
-    }
-}
-
-fn addPackages(b: *Builder, _test: *std.build.LibExeObjStep) void {
-    _test.linkLibC();
-    _test.addPackagePath("events", "src/events.zig");
-    _test.addPackagePath("waitpid", "src/waitpid.zig");
 }
