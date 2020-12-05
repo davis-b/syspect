@@ -1,6 +1,11 @@
 const std = @import("std");
 const os = std.os;
-const warn = std.debug.warn;
+
+fn no_op_warn(fmt: []const u8, args: var) void {}
+const warn = switch (@import("builtin").mode) {
+    .Debug => std.debug.warn,
+    else => no_op_warn,
+};
 
 const waitpid_file = @import("waitpid.zig");
 const waitpid = waitpid_file.waitpid;
