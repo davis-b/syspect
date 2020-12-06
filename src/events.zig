@@ -1,6 +1,9 @@
 const std = @import("std");
 const os = std.os;
 
+// TODO
+// If the bug caused by using (test "test name") instead of creating and running executables is fixed:
+// We would prefer to not print output if (std.builtin.is_test) is true.
 fn no_op_warn(fmt: []const u8, args: var) void {}
 const warn = switch (@import("builtin").mode) {
     .Debug => std.debug.warn,
