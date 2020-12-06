@@ -2,7 +2,7 @@ const std = @import("std");
 const Builder = std.build.Builder;
 const Mode = @import("builtin").Mode;
 
-pub fn build(b: *Builder) void {
+pub fn build(b: *Builder) !void {
     const mode = b.standardReleaseOptions();
 
     const examples = .{
@@ -17,4 +17,6 @@ pub fn build(b: *Builder) void {
         exe.linkLibC();
         exe.install();
     }
+
+    try @import("tests/build.zig").build(b);
 }
