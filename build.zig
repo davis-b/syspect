@@ -1,7 +1,6 @@
 const std = @import("std");
 const Builder = std.build.Builder;
 const Mode = @import("builtin").Mode;
-const root = @import("root");
 
 pub fn build(b: *Builder) void {
     const mode = b.standardReleaseOptions();
