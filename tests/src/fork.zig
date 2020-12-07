@@ -22,7 +22,7 @@ fn specific_calls(target_argv: []const []const u8) !void {
 
     const syscalls = &[_]SYS{
         .fork,
-        .getpid,
+        .gettid,
     };
 
     var inspector = syspect.Inspector.init(allocator, syscalls, .{ .inverse = false });
@@ -31,10 +31,10 @@ fn specific_calls(target_argv: []const []const u8) !void {
     const child_pid = try inspector.spawn_process(allocator, target_argv);
 
     const expected_syscalls = [_]SYS{
-        .getpid,
+        .gettid,
         .fork,
-        .getpid,
-        .getpid,
+        .gettid,
+        .gettid,
     };
 
     var call_index: usize = 0;
@@ -45,7 +45,7 @@ fn specific_calls(target_argv: []const []const u8) !void {
                 try inspector.start_syscall(context.pid);
             },
             .post_call => |context| {
-                if (context.registers.orig_rax == @enumToInt(SYS.getpid)) {
+                if (context.registers.orig_rax == @enumToInt(SYS.gettid)) {
                     testing.expectEqual(@intCast(c_ulonglong, context.pid), context.registers.rax);
                 }
                 expectEnumEqual(SYS, expected_syscalls[call_index], context.registers.orig_rax);

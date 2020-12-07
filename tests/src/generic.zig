@@ -20,7 +20,7 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
                 try inspector.start_syscall(context.pid);
             },
             .post_call => |context| {
-                if (context.registers.orig_rax == @enumToInt(SYS.getpid)) {
+                if (context.registers.orig_rax == @enumToInt(SYS.gettid)) {
                     testing.expectEqual(@intCast(c_ulonglong, context.pid), context.registers.rax);
                 }
                 try inspector.resume_tracee(context.pid);
