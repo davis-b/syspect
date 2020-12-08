@@ -34,7 +34,7 @@ pub fn track_specific_calls(target_argv: []const []const u8, tracked_syscalls: [
     var inspector = syspect.Inspector.init(allocator, tracked_syscalls, .{ .inverse = false });
     defer inspector.deinit();
 
-    const child_pid = try inspector.spawn_process(allocator, target_argv);
+    _ = try inspector.spawn_process(allocator, target_argv);
 
     var call_index: usize = 0;
     while (try inspector.next_syscall()) |syscall| {
