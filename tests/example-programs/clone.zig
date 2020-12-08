@@ -12,5 +12,4 @@ pub fn main() anyerror!void {
 
 fn getTid(arg: u8) void {
     const tid = os.linux.gettid();
-    warn("(clone {}) tid: {}\n", .{ arg, tid });
 }
