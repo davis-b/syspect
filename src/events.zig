@@ -2,8 +2,8 @@ const std = @import("std");
 const os = std.os;
 
 const builtin = @import("builtin");
-fn no_op_warn(fmt: []const u8, args: var) void {}
-const warn = if (builtin.is_test or builtin.mode != .Debug) no_op_warn else std.debug.warn;
+fn no_op_print(fmt: []const u8, args: var) void {}
+const print = if (builtin.is_test or builtin.mode != .Debug) no_op_print else std.debug.warn;
 
 const waitpid_file = @import("waitpid.zig");
 const waitpid = waitpid_file.waitpid;
@@ -72,12 +72,12 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
     switch (wr.status) {
         // Process exited normally
         .exit => |signal| {
-            warn("> {} exit signal: {}\n", .{ tracee.pid, signal });
+            print("> {} exit signal: {}\n", .{ tracee.pid, signal });
             return handle_dying_process(tracee, tracee_map);
         },
         // Process was terminated by a signal
         .kill => |signal| {
-            warn("> {} kill signal: {}\n", .{ tracee.pid, signal });
+            print("> {} kill signal: {}\n", .{ tracee.pid, signal });
             return handle_dying_process(tracee, tracee_map);
         },
 
@@ -92,7 +92,7 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
                 else => {
                     // We have received a PTRACE event.
                     // We want to continue the process as normal and ignore the event.
-                    warn("> [{}] has received PTRACE signal {}\n", .{ tracee.pid, signal });
+                    print("> [{}] has received PTRACE signal {}\n", .{ tracee.pid, signal });
                     try ptrace.syscall(tracee.pid);
                     return EventAction.CONT;
                 },
@@ -101,11 +101,11 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
 
         // Process was stopped by the delivery of a signal
         .stop => |signal| {
-            warn("> [{}] has received linux signal {}\n", .{ tracee.pid, signal });
+            print("> [{}] has received linux signal {}\n", .{ tracee.pid, signal });
 
             switch (signal) {
                 .quit => {
-                    warn("> {} quit signal\n", .{tracee.pid});
+                    print("> {} quit signal\n", .{tracee.pid});
                     // Is this neccessary to be called?
                     try ptrace.syscall(tracee.pid);
                     return handle_dying_process(tracee, tracee_map);
