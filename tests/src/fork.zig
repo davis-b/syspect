@@ -8,10 +8,7 @@ const generic = @import("generic.zig");
 const utils = @import("utils.zig");
 const expectEnumEqual = utils.expectEnumEqual;
 
-/// We would prefer to run this code as a test.
-/// However, when ran as a test, there is a strange issue where
-///  we repeatedly receive an exit signal of 0 on pid -10.
-pub fn main() !void {
+test "fork" {
     const target_argv = [_][]const u8{"zig-cache/bin/tests/example-fork"};
     try specific_calls(target_argv[0..]);
     try generic.ensure_pid_properly_tracked(target_argv[0..]);

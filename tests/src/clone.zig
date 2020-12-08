@@ -8,10 +8,7 @@ const generic = @import("generic.zig");
 const utils = @import("utils.zig");
 const expectEnumEqual = utils.expectEnumEqual;
 
-/// We would prefer to run this code as a test.
-/// However, when ran as a test, there is a strange issue where
-///  we repeatedly receive an exit signal of 0 on pid -10.
-pub fn main() !void {
+test "clone" {
     const target_argv = [_][]const u8{"zig-cache/bin/tests/example-clone"};
     try specific_calls(target_argv[0..]);
     try generic.ensure_pid_properly_tracked(target_argv[0..]);
@@ -42,11 +39,9 @@ fn specific_calls(target_argv: []const []const u8) !void {
         switch (syscall) {
             .pre_call => |context| {
                 expectEnumEqual(SYS, expected_syscalls[call_index], context.registers.orig_rax);
-                std.debug.warn("[{}] pre  - {}\n", .{ context.pid, @tagName(@intToEnum(SYS, context.registers.orig_rax)) });
                 try inspector.start_syscall(context.pid);
             },
             .post_call => |context| {
-                std.debug.warn("[{}] post - {} = {}\n", .{ context.pid, @tagName(@intToEnum(SYS, context.registers.orig_rax)), context.registers.rax });
                 if (context.registers.orig_rax == @enumToInt(SYS.gettid)) {
                     testing.expectEqual(@intCast(c_ulonglong, context.pid), context.registers.rax);
                 }

@@ -2,7 +2,7 @@ const builtin = @import("builtin");
 
 pub usingnamespace @import("syspect.zig");
 
-pub const ptrace = if (builtin.is_test) @import("tests/stubs/ptrace.zig") else @import("ptrace.zig");
+pub const ptrace = @import("ptrace.zig");
 pub const c = @import("c.zig");
 
 // Not required for Syspect.

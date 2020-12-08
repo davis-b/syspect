@@ -30,20 +30,10 @@ pub fn build(b: *Builder) !void {
         test_step.dependOn(&test_cmd.step);
     }
 
-    // While we would prefer to simply run the tests using zig's builtin test keyword,
-    // doing so is currently impossible.
-    // For an unknown reason, waitpid constantly receives an exit signal on pid "-10" while using that method.
     inline for (tests) |path| {
-        const exe = b.addExecutable(path[0], path[1]);
-        exe.addPackagePath("syspect", "src/index.zig");
-        exe.setBuildMode(mode);
-        exe.linkLibC();
-        exe.setOutputDir("zig-cache/bin/tests/");
-
-        const test_cmd = exe.run();
-        test_cmd.step.dependOn(b.getInstallStep());
-        test_step.dependOn(&test_cmd.step);
-        // std.debug.warn("test {}... ", .{path[0]});
+        var test_ = b.addTest(path[1]);
+        test_.addPackagePath("syspect", "src/index.zig");
+        test_.linkLibC();
+        test_step.dependOn(&test_.step);
     }
-    // std.debug.warn("\n", .{});
 }
