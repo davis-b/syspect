@@ -8,11 +8,13 @@ pub fn build(b: *Builder) !void {
     const tests = .{
         .{ "fork", "tests/src/fork.zig" },
         .{ "clone", "tests/src/clone.zig" },
+        .{ "child signals", "tests/src/child_signals.zig" },
     };
 
     const examples = .{
         .{ "example-fork", "tests/example-programs/fork.zig" },
         .{ "example-clone", "tests/example-programs/clone.zig" },
+        .{ "example-child_signals", "tests/example-programs/child_signals.zig" },
     };
 
     try b.makePath("zig-cache/bin/tests/");
