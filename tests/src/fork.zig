@@ -5,6 +5,7 @@ const SYS = std.os.SYS;
 const syspect = @import("syspect");
 
 const generic = @import("generic.zig");
+const utils = @import("utils.zig");
 
 const target_argv = [_][]const u8{"zig-cache/bin/tests/example-fork"};
 const allocator = std.testing.allocator;
@@ -26,5 +27,10 @@ test "track specific calls" {
         .gettid,
     };
 
-    try generic.track_specific_calls(target_argv[0..], tracked_syscalls[0..], expected_syscalls[0..]);
+    var inspector = syspect.Inspector.init(allocator, tracked_syscalls, .{ .inverse = false });
+    defer inspector.deinit();
+    _ = try inspector.spawn_process(allocator, target_argv[0..]);
+
+    try generic.track_some_calls(&inspector, expected_syscalls[0..]);
+    if ((try inspector.next_syscall()) != null) return error.TooManySyscalls;
 }

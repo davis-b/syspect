@@ -7,6 +7,9 @@ const allocator = std.testing.allocator;
 const syspect = @import("syspect");
 const utils = @import("utils.zig");
 
+/// Runs 'target_argv' program using syspect.Inspector.
+/// Inspects each syscall.
+/// Ensures any 'gettid()' calls return the same tid we think called it.
 pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
     const syscalls = &[_]SYS{};
 
@@ -30,28 +33,22 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
     }
 }
 
-pub fn track_specific_calls(target_argv: []const []const u8, tracked_syscalls: []const SYS, expected_calls: []const SYS) !void {
-    var inspector = syspect.Inspector.init(allocator, tracked_syscalls, .{ .inverse = false });
-    defer inspector.deinit();
+/// Gathers next_syscall for each expected syscall; Compares what we expect with what we get.
+/// Has no protection against race conditions.
+/// Takes an 'Inspector' that has already attached to or spawned a process.
+/// Does not guarantee the process has ended.
+pub fn track_some_calls(inspector: *syspect.Inspector, expected_calls: []const SYS) !void {
+    for (expected_calls) |expected| {
+        const pre_call = (try inspector.next_syscall()).?.pre_call;
+        utils.expectEnumEqual(SYS, expected, pre_call.registers.orig_rax);
+        try inspector.start_syscall(pre_call.pid);
 
-    _ = try inspector.spawn_process(allocator, target_argv);
-
-    var call_index: usize = 0;
-    while (try inspector.next_syscall()) |syscall| {
-        switch (syscall) {
-            .pre_call => |context| {
-                utils.expectEnumEqual(SYS, expected_calls[call_index], context.registers.orig_rax);
-                try inspector.start_syscall(context.pid);
-            },
-            .post_call => |context| {
-                if (context.registers.orig_rax == @enumToInt(SYS.gettid)) {
-                    testing.expectEqual(@intCast(c_ulonglong, context.pid), context.registers.rax);
-                }
-                utils.expectEnumEqual(SYS, expected_calls[call_index], context.registers.orig_rax);
-                call_index += 1;
-                try inspector.resume_tracee(context.pid);
-            },
+        const post_call = (try inspector.next_syscall()).?.post_call;
+        if (post_call.registers.orig_rax == @enumToInt(SYS.gettid)) {
+            testing.expectEqual(@intCast(c_ulonglong, post_call.pid), post_call.registers.rax);
         }
+        utils.expectEnumEqual(SYS, expected, post_call.registers.orig_rax);
+        try inspector.resume_tracee(post_call.pid);
     }
 }
 
