@@ -60,6 +60,8 @@ pub fn test_specific_calls(target_argv: []const []const u8, expected_calls: []co
     _ = try inspector.spawn_process(allocator, target_argv);
 
     try test_some_calls(&inspector, expected_calls);
+    // Next syscall returns null when there are no tracee's left alive.
+    // We expect this to be the case here, as the program should have exited.
     if ((try inspector.next_syscall()) != null) return error.TooManySyscalls;
 }
 
