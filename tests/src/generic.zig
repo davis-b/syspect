@@ -69,17 +69,52 @@ pub fn test_specific_calls(target_argv: []const []const u8, expected_calls: []co
 /// Does not guarantee the process has ended.
 pub fn test_some_calls(inspector: *syspect.Inspector, expected_calls: []const Syscall) !void {
     for (expected_calls) |expected| {
-        const pre_call = (try inspector.next_syscall()).?.pre_call;
-        utils.expectEnumEqual(SYS, expected.id, pre_call.registers.orig_rax);
-        try inspector.start_syscall(pre_call.pid);
-
-        const post_call = (try inspector.next_syscall()).?.post_call;
-        if (post_call.registers.orig_rax == @enumToInt(SYS.gettid)) {
-            testing.expectEqual(@intCast(c_ulonglong, post_call.pid), post_call.registers.rax);
-        }
-        utils.expectEnumEqual(SYS, expected.id, post_call.registers.orig_rax);
-        try inspector.resume_tracee(post_call.pid);
+        try test_call(try next_syscall(inspector), expected);
+        var expected2 = expected;
+        // Same syscall, except it now we expect it to have been started
+        expected2.started = !expected.started;
+        try test_call(try next_syscall(inspector), expected2);
     }
+}
+
+/// Tests a syscall against an expected result.
+fn test_call(context: syspect.Inspector.SyscallContext, expected: Syscall) !void {
+    switch (context) {
+        .pre_call => |pre_call| {
+            utils.expectEnumEqual(SYS, expected.id, pre_call.registers.orig_rax);
+            testing.expectEqual(expected.started, false);
+            if (expected.pid) |epid| {
+                testing.expectEqual(epid, pre_call.pid);
+            }
+            // Do not test for result here, because there is no result on a pre_call
+        },
+        .post_call => |post_call| {
+            utils.expectEnumEqual(SYS, expected.id, post_call.registers.orig_rax);
+            testing.expectEqual(expected.started, true);
+            if (expected.pid) |epid| {
+                testing.expectEqual(epid, post_call.pid);
+            }
+            if (expected.result) |eresult| {
+                testing.expectEqual(eresult, post_call.registers.rax);
+            }
+
+            // Ensure gettid returns the same pid we expect to be making the syscall.
+            if (post_call.registers.orig_rax == @enumToInt(SYS.gettid)) {
+                testing.expectEqual(@intCast(c_ulonglong, post_call.pid), post_call.registers.rax);
+            }
+        },
+    }
+}
+
+// Convenience function
+// Gathers next syscall and starts or resumes tracee
+fn next_syscall(inspector: *syspect.Inspector) !syspect.Inspector.SyscallContext {
+    const context = (try inspector.next_syscall()).?;
+    switch (context) {
+        .pre_call => |syscall| try inspector.start_syscall(syscall.pid),
+        .post_call => |syscall| try inspector.resume_tracee(syscall.pid),
+    }
+    return context;
 }
 
 pub const Syscall = struct {
@@ -89,9 +124,10 @@ pub const Syscall = struct {
     pid: ?std.os.pid_t = null,
 
     // Expected result. Null means we do not test against the result.
-    result: ?c_int = null,
+    result: ?c_ulonglong = null,
 
-    // Has the syscall been started? Used and changed internally.
+    // Has the syscall been started? Value changed when it passes a test,
+    //  as we expect all syscalls to loop through 'start, end' states.
     started: bool = false,
 };
 
@@ -100,19 +136,19 @@ pub const Syscall = struct {
 pub fn ooo_call_tracking(inspector: *syspect.Inspector, calls: []Syscall) !void {
     var remaining: usize = calls.len * 2;
     while (remaining > 0) : (remaining -= 1) {
-        const syscall = (try inspector.next_syscall()).?;
-        switch (syscall) {
-            .pre_call => |context| {
-                const id = @intToEnum(SYS, context.registers.orig_rax);
-                const call = try verify(calls, Syscall{ .id = id, .pid = context.pid, .started = false });
+        const context = (try inspector.next_syscall()).?;
+        switch (context) {
+            .pre_call => |syscall| {
+                const id = @intToEnum(SYS, syscall.registers.orig_rax);
+                const call = try verify(calls, Syscall{ .id = id, .pid = syscall.pid, .started = false });
                 call.started = !call.started;
-                try inspector.start_syscall(context.pid);
+                try inspector.start_syscall(syscall.pid);
             },
-            .post_call => |context| {
-                const id = @intToEnum(SYS, context.registers.orig_rax);
-                const call = try verify(calls, Syscall{ .id = id, .pid = context.pid, .started = true });
+            .post_call => |syscall| {
+                const id = @intToEnum(SYS, syscall.registers.orig_rax);
+                const call = try verify(calls, Syscall{ .id = id, .pid = syscall.pid, .started = true });
                 call.started = !call.started;
-                try inspector.resume_tracee(context.pid);
+                try inspector.resume_tracee(syscall.pid);
             },
         }
     }
