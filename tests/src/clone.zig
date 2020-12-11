@@ -14,22 +14,11 @@ test "generic pid tracking" {
 }
 
 test "track specific calls" {
-    const tracked_syscalls = &[_]SYS{
-        .clone,
-        .gettid,
+    const expected_syscalls = [_]generic.Syscall{
+        .{ .id = .gettid },
+        .{ .id = .clone },
+        .{ .id = .gettid },
+        .{ .id = .gettid },
     };
-
-    const expected_syscalls = [_]SYS{
-        .gettid,
-        .clone,
-        .gettid,
-        .gettid,
-    };
-
-    var inspector = syspect.Inspector.init(allocator, tracked_syscalls, .{ .inverse = false });
-    defer inspector.deinit();
-    _ = try inspector.spawn_process(allocator, target_argv[0..]);
-
-    try generic.track_some_calls(&inspector, expected_syscalls[0..]);
-    if ((try inspector.next_syscall()) != null) return error.TooManySyscalls;
+    try generic.test_specific_calls(target_argv[0..], expected_syscalls[0..]);
 }

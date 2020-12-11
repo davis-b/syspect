@@ -33,21 +33,51 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
     }
 }
 
+/// Runs and inspects a program, tracking specific calls.
+/// Runs applicable tests on every inspected syscall.
+/// Expects syscalls to show up in order.
+/// Expects the expected syscalls to be the only ones inspected from program start to end.
+pub fn test_specific_calls(target_argv: []const []const u8, expected_calls: []const Syscall) !void {
+    // Create a buffer, we are unlikely to use its entire size.
+    // We would receive an "index out of bounds" error if we used more syscalls than allocated for here.
+    var tracked_syscalls: [100]SYS = undefined;
+    var unique_calls: usize = 0;
+
+    // Creates a unique set of syscalls from 'expected_calls'.
+    for (expected_calls) |expected| {
+        // Check to see if expected call id is already tracked.
+        for (tracked_syscalls) |tracked| {
+            if (expected.id != tracked) {
+                tracked_syscalls[unique_calls] = expected.id;
+                unique_calls += 1;
+                break;
+            }
+        }
+    }
+    var inspector = syspect.Inspector.init(allocator, tracked_syscalls[0..unique_calls], .{ .inverse = false });
+    defer inspector.deinit();
+
+    _ = try inspector.spawn_process(allocator, target_argv);
+
+    try test_some_calls(&inspector, expected_calls);
+    if ((try inspector.next_syscall()) != null) return error.TooManySyscalls;
+}
+
 /// Gathers next_syscall for each expected syscall; Compares what we expect with what we get.
 /// Has no protection against race conditions.
 /// Takes an 'Inspector' that has already attached to or spawned a process.
 /// Does not guarantee the process has ended.
-pub fn track_some_calls(inspector: *syspect.Inspector, expected_calls: []const SYS) !void {
+pub fn test_some_calls(inspector: *syspect.Inspector, expected_calls: []const Syscall) !void {
     for (expected_calls) |expected| {
         const pre_call = (try inspector.next_syscall()).?.pre_call;
-        utils.expectEnumEqual(SYS, expected, pre_call.registers.orig_rax);
+        utils.expectEnumEqual(SYS, expected.id, pre_call.registers.orig_rax);
         try inspector.start_syscall(pre_call.pid);
 
         const post_call = (try inspector.next_syscall()).?.post_call;
         if (post_call.registers.orig_rax == @enumToInt(SYS.gettid)) {
             testing.expectEqual(@intCast(c_ulonglong, post_call.pid), post_call.registers.rax);
         }
-        utils.expectEnumEqual(SYS, expected, post_call.registers.orig_rax);
+        utils.expectEnumEqual(SYS, expected.id, post_call.registers.orig_rax);
         try inspector.resume_tracee(post_call.pid);
     }
 }
