@@ -54,3 +54,54 @@ pub fn track_specific_calls(target_argv: []const []const u8, tracked_syscalls: [
         }
     }
 }
+
+pub const Syscall = struct {
+    id: SYS,
+
+    // Expected PID of this syscalls caller. Null means we do not test against PID.
+    pid: ?std.os.pid_t = null,
+
+    // Expected result. Null means we do not test against the result.
+    result: ?c_int = null,
+
+    // Has the syscall been started? Used and changed internally.
+    started: bool = false,
+};
+
+/// Out of order call tracking
+/// Tracks system calls in a way that ignores potential race conditions.
+pub fn ooo_call_tracking(inspector: *syspect.Inspector, calls: []Syscall) !void {
+    var remaining: usize = calls.len * 2;
+    while (remaining > 0) : (remaining -= 1) {
+        const syscall = (try inspector.next_syscall()).?;
+        switch (syscall) {
+            .pre_call => |context| {
+                const id = @intToEnum(SYS, context.registers.orig_rax);
+                const call = try verify(calls, Syscall{ .id = id, .pid = context.pid, .started = false });
+                call.started = !call.started;
+                try inspector.start_syscall(context.pid);
+            },
+            .post_call => |context| {
+                const id = @intToEnum(SYS, context.registers.orig_rax);
+                const call = try verify(calls, Syscall{ .id = id, .pid = context.pid, .started = true });
+                call.started = !call.started;
+                try inspector.resume_tracee(context.pid);
+            },
+        }
+    }
+}
+
+/// Verifies a syscall falls within expected boundaries
+fn verify(syscalls: []Syscall, syscall: Syscall) !*Syscall {
+    for (syscalls) |*hay| {
+        var needle = syscall;
+        if (hay.pid == null) needle.pid = null;
+        if (hay.result == null) needle.result = null;
+
+        if (std.meta.eql(needle, hay.*)) {
+            return hay;
+        }
+    }
+    std.debug.warn("syscall unmatched: {} {}\n", .{ @tagName(syscall.id), syscall });
+    return error.UnmatchedSyscall;
+}
