@@ -159,18 +159,14 @@ fn in(needle: c_ulonglong, haystack: []const os.SYS) bool {
 }
 
 // TODO replace this with @suspend and resume in handle_event and caller code respectively
-/// Must be called after next_event returns INSPECT.
-/// Executes the system call, as would normally happen in handle_event() with non-inspected calls.
+/// Must be called after next_event returns INSPECT or INSPECT_RESULT
+/// Resumes tracee before or after the system call, as would normally happen in handle_event() with non-inspected calls.
 pub fn resume_from_inspection(tracee_map: *TraceeMap, pid: os.pid_t) !void {
     const tracee: *Tracee = try get_or_make_tracee(tracee_map, pid);
-    try begin_syscall(tracee);
-}
-
-/// Must be called after next_event returns INSPECT_RESULT.
-/// Executes the system call, as would normally happen in handle_event() with non-inspected calls.
-pub fn resume_from_inspection_result(tracee_map: *TraceeMap, pid: os.pid_t) !void {
-    const tracee: *Tracee = try get_or_make_tracee(tracee_map, pid);
-    try end_syscall(tracee);
+    switch (tracee.state) {
+        .RUNNING => try begin_syscall(tracee),
+        .EXECUTING_CALL => try end_syscall(tracee),
+    }
 }
 
 /// Tracee has stopped execution right before

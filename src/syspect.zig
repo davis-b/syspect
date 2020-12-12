@@ -161,11 +161,7 @@ pub const Inspector = struct {
 
     /// Resumes Tracee after a syscall or syscall result has been inspected.
     pub fn resume_tracee(self: *Inspector, pid: os.pid_t) !void {
-        const tracee = if (self.tracee_map.getValue(pid)) |t| t else return error.TraceeNotAlive;
-        switch (tracee.state) {
-            .RUNNING => try events.resume_from_inspection(&self.tracee_map, pid),
-            .EXECUTING_CALL => try events.resume_from_inspection_result(&self.tracee_map, pid),
-        }
+        try events.resume_from_inspection(&self.tracee_map, pid);
     }
 
     /// This will block while trying to finish the syscall.
