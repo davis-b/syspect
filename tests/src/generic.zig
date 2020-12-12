@@ -31,6 +31,10 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
             },
         }
     }
+
+    // Ensure we properly acknowledge a state where all tracees have exited.
+    testing.expectEqual(false, inspector.has_tracees);
+    testing.expectEqual(try inspector.next_syscall(), null);
 }
 
 /// Runs and inspects a program, tracking specific calls.

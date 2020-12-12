@@ -148,7 +148,10 @@ pub const Inspector = struct {
             const action = try events.next_event(null, &self.tracee_map, &context, .{ .inverse = self.inverse, .calls = self.syscalls });
             switch (action) {
                 .CONT, .NORMAL => continue,
-                .EXIT => return null,
+                .EXIT => {
+                    self.has_tracees = false;
+                    return null;
+                },
                 .INSPECT => {
                     return SyscallContext{ .pre_call = context };
                 },
