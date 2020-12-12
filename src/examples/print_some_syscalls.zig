@@ -41,7 +41,7 @@ pub fn main() !void {
             .pre_call => |context| {
                 const pid_name = processName(allocator, &pid_name_cache, context.pid);
                 warn("[{} - {}] starting {}\n", .{ context.pid, pid_name, enumName(context.registers.orig_rax) });
-                try inspector.start_syscall(context.pid);
+                try inspector.resume_tracee(context.pid);
             },
             .post_call => |context| {
                 // Arguments may not be accurate, syscall return value will be accurate.

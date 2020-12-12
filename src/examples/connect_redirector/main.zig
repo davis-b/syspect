@@ -24,7 +24,7 @@ pub fn main() !void {
         switch (syscall.*) {
             .pre_call => |context| {
                 try redirectConnectCall(context);
-                try inspector.start_syscall(context.pid);
+                try inspector.resume_tracee(context.pid);
             },
             .post_call => |context| {
                 try inspector.resume_tracee(context.pid);

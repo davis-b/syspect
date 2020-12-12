@@ -35,9 +35,9 @@ pub const Options = struct {
 ///                 can_modify_registers_here(context);
 ///
 ///                 if (do_not_want_block) {
-///                     inspector.start_syscall(context);
+///                     inspector.resume_tracee(context.pid);
 ///                 } else if (block_until_syscall_finishes) {
-///                     const maybe_registers = try inspector.start_and_finish_syscall(context);
+///                     const maybe_registers = try inspector.start_and_finish_syscall(context.pid);
 ///                     if (maybe_registers) |regs| {
 ///                         warn("Syscall result: {}\n", .{regs});
 ///                     }
@@ -159,14 +159,13 @@ pub const Inspector = struct {
         }
     }
 
-    /// Executes a syscall that has been inspected.
-    pub fn start_syscall(self: *Inspector, pid: os.pid_t) !void {
-        try events.resume_from_inspection(&self.tracee_map, pid);
-    }
-
-    /// Resumes Tracee after a syscall finishes.
+    /// Resumes Tracee after a syscall or syscall result has been inspected.
     pub fn resume_tracee(self: *Inspector, pid: os.pid_t) !void {
-        try events.resume_from_inspection_result(&self.tracee_map, pid);
+        const tracee = if (self.tracee_map.getValue(pid)) |t| t else return error.TraceeNotAlive;
+        switch (tracee.state) {
+            .RUNNING => try events.resume_from_inspection(&self.tracee_map, pid),
+            .EXECUTING_CALL => try events.resume_from_inspection_result(&self.tracee_map, pid),
+        }
     }
 
     /// This will block while trying to finish the syscall.
@@ -175,7 +174,7 @@ pub const Inspector = struct {
     /// Updates context.registers with new result.
     /// If result is null, program has concluded.
     pub fn start_and_finish_syscall_blocking(self: *Inspector, context: events.Context) !?c.user_regs_struct {
-        try self.start_syscall(context.pid);
+        try self.resume_tracee(context.pid);
         var new_ctx = context;
 
         while (true) {

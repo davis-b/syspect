@@ -42,7 +42,7 @@ test "main test" {
     const child_pid = fork: {
         const pre_call = (try inspector.next_syscall()).?.pre_call;
         utils.expectEnumEqual(SYS, SYS.fork, pre_call.registers.orig_rax);
-        try inspector.start_syscall(pre_call.pid);
+        try inspector.resume_tracee(pre_call.pid);
 
         const post_call = (try inspector.next_syscall()).?.post_call;
         utils.expectEnumEqual(SYS, SYS.fork, post_call.registers.orig_rax);
@@ -64,7 +64,7 @@ test "main test" {
     gettid: {
         const pre_call = (try inspector.next_syscall()).?.pre_call;
         utils.expectEnumEqual(SYS, SYS.gettid, pre_call.registers.orig_rax);
-        try inspector.start_syscall(pre_call.pid);
+        try inspector.resume_tracee(pre_call.pid);
 
         const post_call = (try inspector.next_syscall()).?.post_call;
         utils.expectEnumEqual(SYS, SYS.gettid, post_call.registers.orig_rax);

@@ -21,7 +21,7 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
     while (try inspector.next_syscall()) |syscall| {
         switch (syscall) {
             .pre_call => |context| {
-                try inspector.start_syscall(context.pid);
+                try inspector.resume_tracee(context.pid);
             },
             .post_call => |context| {
                 if (context.registers.orig_rax == @enumToInt(SYS.gettid)) {
@@ -113,7 +113,7 @@ fn test_call(context: syspect.Inspector.SyscallContext, expected: Syscall) !void
 fn next_syscall(inspector: *syspect.Inspector) !syspect.Inspector.SyscallContext {
     const context = (try inspector.next_syscall()).?;
     switch (context) {
-        .pre_call => |syscall| try inspector.start_syscall(syscall.pid),
+        .pre_call => |syscall| try inspector.resume_tracee(syscall.pid),
         .post_call => |syscall| try inspector.resume_tracee(syscall.pid),
     }
     return context;
@@ -144,7 +144,7 @@ pub fn ooo_call_tracking(inspector: *syspect.Inspector, calls: []Syscall) !void 
                 const id = @intToEnum(SYS, syscall.registers.orig_rax);
                 const call = try verify(calls, Syscall{ .id = id, .pid = syscall.pid, .started = false });
                 call.started = !call.started;
-                try inspector.start_syscall(syscall.pid);
+                try inspector.resume_tracee(syscall.pid);
             },
             .post_call => |syscall| {
                 const id = @intToEnum(SYS, syscall.registers.orig_rax);
