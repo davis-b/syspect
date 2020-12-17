@@ -99,17 +99,19 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
             }
         },
 
-        // Process was stopped by the delivery of a signal
+        // Process was stopped by the delivery of a signal.
         .stop => |signal| {
             print("> [{}] has received linux signal: {}\n", .{ tracee.pid, @tagName(signal) });
 
             switch (signal) {
+                // These signals are associated with the death of the tracee process.
                 .quit, .segv => {
                     print("> {} quitting because of signal: {}\n", .{ tracee.pid, signal });
                     // Is this neccessary to be called?
                     try ptrace.syscall(tracee.pid);
                     return handle_dying_process(tracee, tracee_map);
                 },
+                // The remaining signals should be effectively ignored.
                 else => {
                     try ptrace.syscall(tracee.pid);
                     return EventAction.CONT;
