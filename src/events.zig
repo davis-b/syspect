@@ -101,11 +101,11 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
 
         // Process was stopped by the delivery of a signal
         .stop => |signal| {
-            print("> [{}] has received linux signal {}\n", .{ tracee.pid, signal });
+            print("> [{}] has received linux signal: {}\n", .{ tracee.pid, @tagName(signal) });
 
             switch (signal) {
-                .quit => {
-                    print("> {} quit signal\n", .{tracee.pid});
+                .quit, .segv => {
+                    print("> {} quitting because of signal: {}\n", .{ tracee.pid, signal });
                     // Is this neccessary to be called?
                     try ptrace.syscall(tracee.pid);
                     return handle_dying_process(tracee, tracee_map);
