@@ -9,6 +9,7 @@ pub fn build(b: *Builder) !void {
     const examples = .{
         .{ "redirector", "src/examples/connect_redirector/main.zig" },
         .{ "print_some_syscalls", "src/examples/print_some_syscalls.zig" },
+        .{ "print_open2_pathnames", "src/examples/print_pathname.zig" },
     };
 
     inline for (examples) |i| {
