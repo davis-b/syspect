@@ -51,7 +51,7 @@ pub fn readString(pid: os.pid_t, ptr: usize, buffer: []u8) ![]u8 {
     for (buffer) |i, index| {
         if (i == 0) return buffer[0..index];
     }
-    @panic("Filename end was not found!");
+    return error.FilenameEndNotFound;
 }
 
 /// Handles argument parsing.
