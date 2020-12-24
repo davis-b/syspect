@@ -18,7 +18,7 @@ pub fn main() !void {
     defer inspector.deinit();
     try init(allocator, &inspector);
 
-    // Here where are unwrapping a tagged union which tells us if the syscall has been executed or not.
+    // Here we are unwrapping a tagged union, which tells us if the syscall has been executed or not.
     while (try inspector.next_syscall()) |position_context| {
         switch (position_context) {
             // The syscall will be executed after we resume the tracee.
