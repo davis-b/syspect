@@ -1,15 +1,28 @@
 # syspect #
-_syspect_ is a system call inspection/modification library built upon [ptrace](https://en.wikipedia.org/wiki/Ptrace). _syspect_ is built in [zig](https://ziglang.org/), a C-like programming language.
 
-In short, this library allows you to spawn or attach to a program (hereby known as the tracee), pause the tracee when a system call is executed or finished, modify the associated system call registers before a system call is executed or before the result of a system call is returned to the tracee, and finally, resume the tracee.
+### What is _syspect_? ###
+
+
+In as few words as possible, _syspect_ is a library that allows you to view and modify [syscalls](https://en.wikipedia.org/wiki/System_call) made by other programs.
+
+In a little more detail, _syspect_ allows you to:
+
+* Spawn or attach to a running program (hereby known as the tracee).
+* Pause the tracee when a syscall is executed or finished, resuming the tracee at will.
+* Modify any syscall's arguments before it is executed by the kernel.
+* Modify any syscall result before it is returned to the tracee.
+
+### More Info ###
+
+_syspect_ is a syscall inspection/modification library built upon [ptrace](https://en.wikipedia.org/wiki/Ptrace).  
+_syspect_ is built in [zig](https://ziglang.org/), a C-like programming language.
 
 #### What is ptrace? ####
-_ptrace_ is a debugging interface provided by the Linux kernel. Used to great effect by debuggers such as [gdb](https://www.gnu.org/software/gdb/), it is somewhat complex and offers many avenues to shoot yourself in the foot when tracing multithreaded programs.
+_ptrace_ is a debugging interface provided by the Linux kernel. While used to great effect by debuggers such as [gdb](https://www.gnu.org/software/gdb/), it is somewhat complex.
 
 #### How does this relate to _syspect_? ####
-To get _ptrace_ working correctly, especially when dealing with multiple tracees at once, requires knowledge of Linux that may not be necessary for the intended program.  
+To get _ptrace_ working correctly, especially when dealing with multiple tracees at once, requires knowledge of Linux that may not be necessary for the resulting program.  
 This is where _syspect_ comes in. _syspect_ is easy to use and hard to misuse.  
-_syspect_ uses a subset of ptrace to allow you to monitor and modify system calls executed by a chosen tracee program, and optionally, its descendants.  
 If you are writing a program that can make good use of it, _syspect_ aims to make your life easier than _ptrace_ would.
 
 - - -
@@ -32,12 +45,11 @@ _syspect_ does link against C in order to use ptrace. That requirement should no
 To begin learning the _syspect_ library, the best place to start would be the example programs. They are small and hopefully easy to understand.  
 If you like to browse code to get a grasp of a library, the _src/syspect.zig_ file is where you will want to start. This file contains the _Inspector_ structure, which is where the majority of the public facing code is located.
 
-
 ## Code Flow Overview ##
 
 ### Init ###
 A program using the _syspect_ library will begin by initializing an _Inspector_ struct. This is the structure we will be using to interact with the rest of the _syspect_ library.  
-In the init call, _Inspector_ is to be given a slice of system calls (referred to from now on as syscalls) that we want to pause the tracee (program we are inspecting) at and inspect or modify in our own code.  
+In the init call, _Inspector_ is to be given a slice of syscalls (referred to from now on as syscalls) that we want to pause the tracee (program we are inspecting) at and inspect or modify in our own code.  
 As well as the slice of syscalls and the allocator, _Inspector_ may optionally be given any number of two options. Those are "multithread" and "inverse". When "multithread" is true, _Inspector_ will automatically begin tracing the child threads and processes of the initially traced program. When "inverse" is true, the slice of syscalls we give the structure changes from a 'watch list' to an 'ignore list'.
 
 ### Attaching to a tracee ###
