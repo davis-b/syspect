@@ -63,7 +63,7 @@ This function will return when, in a traced program, a syscall that matches our 
 
 When "next_syscall" returns a non-null value, it means the tracee returned by waitpid(2) is halted until we resume it.
 "next_syscall" returns a tagged union. The tags are "pre_call" and "post_call", both contain an instance of a _Context_ structure.  
-Syscall can also return "null" when all tracees have exited.
+"next_syscall" can also return "null" when all tracees have exited.
 
 **What does it mean when the "next_syscall" result indicates we are in a pre_call state?**  
 The tracee has initiated a syscall. The syscall has not yet been executed by the kernel.  
