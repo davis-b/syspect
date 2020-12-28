@@ -116,8 +116,8 @@ pub fn main() !void {
     // Spawns the process and associated arguments located in 'args', then immediately begins tracing the process.
     const tracee_pid = try inspector.spawn_process(allocator, args[0..]);
 
-    // Here we are unwrapping a tagged union, which tells us if the syscall has been executed or not.
     while (try inspector.next_syscall()) |position_context| {
+		// Here we are unwrapping a tagged union, which tells us if the syscall has been executed or not.
         switch (position_context) {
             // The syscall will be executed after we resume the tracee.
             // Now is our chance to inspect and even modify the arguments or tracee's memory.
