@@ -45,6 +45,9 @@ pub fn main() !void {
     }
 }
 
+/// Reads data as a string until we reach a null termination character.
+/// Takes a pointer to a string. The pointer does not have to point to our memory space.
+/// Can read data from other processes by utilizing "syspect.interprocess_rw"
 pub fn readString(pid: os.pid_t, ptr: usize, buffer: []u8) ![]u8 {
     const vmreadv_result = try syspect.interprocess_rw.readv(pid, buffer[0..], ptr);
 
