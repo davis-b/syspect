@@ -50,7 +50,7 @@ If you like to browse code to get a grasp of a library, the _src/syspect.zig_ fi
 ### Init ###
 A program using the _syspect_ library will begin by initializing an _Inspector_ struct. This is the structure we will be using to interact with the rest of the _syspect_ library.  
 In the init call, _Inspector_ is to be given a slice of syscalls (referred to from now on as syscalls) that we want to pause the tracee (program we are inspecting) at and inspect or modify in our own code.  
-As well as the slice of syscalls and the allocator, _Inspector_ may optionally be given any number of two options. Those are "multithread" and "inverse". When "multithread" is true, _Inspector_ will automatically begin tracing the child threads and processes of the initially traced program. When "inverse" is true, the slice of syscalls we give the structure changes from a 'watch list' to an 'ignore list'.
+As well as the slice of syscalls and the allocator, _Inspector_ may optionally be given up to two options. Those are "multithread" and "inverse". When "multithread" is true, _Inspector_ will automatically begin tracing the child threads and processes of the initially traced program. When "inverse" is true, the slice of syscalls we give the structure changes from a 'watch list' to an 'ignore list'.
 
 ### Attaching to a tracee ###
 From there, we will either attach to a running process, or spawn a child process. Regardless of which option is chosen, the _Inspector_ will have its first tracee.  
