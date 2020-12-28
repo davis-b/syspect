@@ -7,7 +7,7 @@ pub fn build(b: *Builder) !void {
     const mode = b.standardReleaseOptions();
 
     const examples = .{
-        .{ "redirector", "examples/connect_redirector/main.zig" },
+        .{ "connect_redirector", "examples/connect_redirector/main.zig" },
         .{ "print_some_syscalls", "examples/print_some_syscalls.zig" },
         .{ "print_open2_pathnames", "examples/print_pathname.zig" },
     };
