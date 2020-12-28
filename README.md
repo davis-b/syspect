@@ -7,7 +7,7 @@ In as few words as possible, _syspect_ is a library that allows you to view and 
 
 In a little more detail, _syspect_ allows you to:
 
-* Spawn or attach to a running program (hereby known as the tracee).
+* Spawn or attach to a running program (hereafter known as the tracee).
 * Pause the tracee when any syscall is started or finished, resuming the tracee at will.
 * Modify any syscall's arguments before it is executed by the kernel.
 * Modify any syscall's result before it is returned to the tracee.
