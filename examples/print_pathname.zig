@@ -18,7 +18,7 @@ pub fn main() !void {
     defer inspector.deinit();
     try init(allocator, &inspector);
 
-    while (try inspector.next_syscall()) |position_context| {
+    while (try next_syscall(&inspector)) |position_context| {
         // Here we are unwrapping a tagged union, which tells us if the syscall has been executed or not.
         switch (position_context) {
             // The syscall will be executed after we resume the tracee.
@@ -43,6 +43,17 @@ pub fn main() !void {
             },
         }
     }
+}
+
+// Currently Steam returns error.NoSuchProcess when we call ptrace.getRegister during a ptrace syscall trap.
+// We are unsure why this happens. However, this is a working bandaid, for now.
+fn next_syscall(inspector: *syspect.Inspector) anyerror!?syspect.Inspector.SyscallContext {
+    return inspector.next_syscall() catch |err| {
+        return switch (err) {
+            error.NoSuchProcess => next_syscall(inspector),
+            else => err,
+        };
+    };
 }
 
 /// Reads data as a string until we reach a null termination character.
