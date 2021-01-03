@@ -53,8 +53,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 }
 
 fn redirectConnectCall(context: syspect.Context) !void {
-    // rsi register contains pointer to a sockaddr (connect syscall on x86_64)
-    const sockaddr_register_ptr = context.registers.rsi;
+    const sockaddr_register_ptr = @intCast(usize, context.registers.arg2);
     const sockaddr = try sockaddr_rw.readSockaddr_PVReadv(context.pid, sockaddr_register_ptr);
 
     if (sockaddr.family != os.AF_INET and sockaddr.family != os.AF_INET6) {

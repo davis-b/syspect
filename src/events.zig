@@ -40,7 +40,7 @@ pub const EventAction = enum {
 ///  the caller of next_event.
 pub const Context = struct {
     pid: os.pid_t,
-    registers: c.user_regs_struct,
+    registers: c.registers,
 };
 
 pub const TraceeMap = std.AutoHashMap(os.pid_t, Tracee);
@@ -132,7 +132,7 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
             // Collect syscall arguments.
             ctx.registers = try ptrace.getregs(tracee.pid);
 
-            if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
+            if (in(ctx.registers.orig_syscall, inspections.calls) != inspections.inverse) {
                 return EventAction.INSPECT;
             }
 
@@ -143,7 +143,7 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
             ctx.registers = try ptrace.getregs(tracee.pid);
 
             // Allows inspecting syscall results without resorting to blocking.
-            if (in(ctx.registers.orig_rax, inspections.calls) != inspections.inverse) {
+            if (in(ctx.registers.orig_syscall, inspections.calls) != inspections.inverse) {
                 return EventAction.INSPECT_RESULT;
             }
 
@@ -153,7 +153,7 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
     return EventAction.NORMAL;
 }
 
-fn in(needle: c_ulonglong, haystack: []const os.SYS) bool {
+fn in(needle: var, haystack: []const os.SYS) bool {
     for (haystack) |hay| {
         if (needle == @enumToInt(hay)) return true;
     }

@@ -40,7 +40,7 @@ pub fn main() !void {
         switch (syscall.*) {
             .pre_call => |context| {
                 const pid_name = processName(allocator, &pid_name_cache, context.pid);
-                warn("[{} - {}] starting {}\n", .{ context.pid, pid_name, enumName(context.registers.orig_rax) });
+                warn("[{} - {}] starting {}\n", .{ context.pid, pid_name, enumName(context.registers.orig_syscall) });
                 try inspector.resume_tracee(context.pid);
             },
             .post_call => |context| {
@@ -49,7 +49,7 @@ pub fn main() !void {
                 // Unless the system resets registers to their state at the initial call? Seems unlikely.
                 print_info(context);
                 const pid_name = processName(allocator, &pid_name_cache, context.pid);
-                warn("[{} - {}] finished {}\n\n", .{ context.pid, pid_name, enumName(context.registers.orig_rax) });
+                warn("[{} - {}] finished {}\n\n", .{ context.pid, pid_name, enumName(context.registers.orig_syscall) });
                 try inspector.resume_tracee(context.pid);
             },
         }
@@ -121,11 +121,11 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 /// Prints the system call name and its first four arguments
 fn print_info(context: syspect.Context) void {
     warn("[{}] ", .{context.pid});
-    warn("{} ( ", .{enumName(context.registers.orig_rax)});
-    warn("{}, ", .{context.registers.rdi});
-    warn("{}, ", .{context.registers.rsi});
-    warn("{}, ", .{context.registers.rdx});
-    warn("{}", .{context.registers.r10});
+    warn("{} ( ", .{enumName(context.registers.orig_syscall)});
+    warn("{}, ", .{context.registers.arg1});
+    warn("{}, ", .{context.registers.arg2});
+    warn("{}, ", .{context.registers.arg3});
+    warn("{}", .{context.registers.arg4});
     warn(" ) = ", .{});
-    warn("{}\n", .{@intCast(isize, context.registers.rax)});
+    warn("{}\n", .{@intCast(isize, context.registers.syscall_then_result)});
 }

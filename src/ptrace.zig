@@ -48,12 +48,12 @@ pub fn syscall(pid: os.pid_t) !void {
     _ = try ptrace(c.PTRACE_SYSCALL, pid, 0, 0);
 }
 
-pub fn getregs(pid: os.pid_t) !c.user_regs_struct {
-    var registers: c.user_regs_struct = undefined;
+pub fn getregs(pid: os.pid_t) !c.registers {
+    var registers: c.registers = undefined;
     _ = try ptrace(c.PTRACE_GETREGS, pid, 0, &registers);
     return registers;
 }
 
-pub fn setregs(pid: os.pid_t, registers: c.user_regs_struct) !void {
+pub fn setregs(pid: os.pid_t, registers: c.registers) !void {
     _ = try ptrace(c.PTRACE_SETREGS, pid, 0, &registers);
 }
