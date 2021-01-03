@@ -2,9 +2,7 @@ const std = @import("std");
 const Builder = std.build.Builder;
 const Mode = @import("builtin").Mode;
 
-pub fn build(b: *Builder) !void {
-    const mode = b.standardReleaseOptions();
-
+pub fn build(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget) !void {
     const tests = .{
         .{ "fork", "tests/src/fork.zig" },
         .{ "clone", "tests/src/clone.zig" },
@@ -22,6 +20,8 @@ pub fn build(b: *Builder) !void {
     const test_step = b.step("test", "Run library tests");
     inline for (examples) |path| {
         const exe = b.addExecutable(path[0], path[1]);
+        exe.setTarget(target);
+        exe.setBuildMode(mode);
         exe.setOutputDir("zig-cache/bin/tests/");
         // TODO
         // exe.install causes examples to be installed in both bin/ and bin/tests/
@@ -34,6 +34,8 @@ pub fn build(b: *Builder) !void {
 
     inline for (tests) |path| {
         var test_ = b.addTest(path[1]);
+        test_.setTarget(target);
+        test_.setBuildMode(mode);
         test_.addPackagePath("syspect", "src/index.zig");
         test_.linkLibC();
         test_step.dependOn(&test_.step);
