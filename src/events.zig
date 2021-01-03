@@ -86,6 +86,7 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
             switch (signal) {
                 .syscall_trap => {
                     // Continue through to the typical next step
+                    errdefer print("> [{}] error while handling syscall trap for syscall: {}\n", .{ tracee.pid, ctx.registers });
                     return try handle_event(tracee, tracee_map, ctx, inspections);
                 },
                 // Is there any scenario where we receive this event and the tracee survives? Should we check for that?
