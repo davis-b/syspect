@@ -124,19 +124,19 @@ pub fn main() !void {
             .pre_call => |context| {
                 var buffer = [_]u8{0} ** std.fs.MAX_PATH_BYTES;
                 // openat(2) and open(2) share all arguments/argument positions, except for openat(2)'s first argument.
-                const pathname = switch (@intToEnum(std.os.SYS, context.registers.orig_rax)) {
-                    .open => try readString(context.pid, context.registers.rdi, buffer[0..]),
-                    .openat => try readString(context.pid, context.registers.rsi, buffer[0..]),
+                const pathname = switch (@intToEnum(std.os.SYS, context.registers.orig_syscall)) {
+                    .open => try readString(context.pid, context.registers.arg1, buffer[0..]),
+                    .openat => try readString(context.pid, context.registers.arg2, buffer[0..]),
                     else => unreachable,
                 };
-                warn("pid = {}, '{}' path = '{}'\n", .{ context.pid, @tagName(@intToEnum(std.os.SYS, context.registers.orig_rax)), pathname });
+                warn("pid = {}, '{}' path = '{}'\n", .{ context.pid, @tagName(@intToEnum(std.os.SYS, context.registers.orig_syscall)), pathname });
 
                 try inspector.resume_tracee(context.pid);
             },
             // The syscall has finished and the result will be returned to the tracee when resumed.
             // Here we can view the result as well as modify what the tracee will see as the return value.
             .post_call => |context| {
-                warn("pid = {}, '{}' = {}\n\n", .{ context.pid, @tagName(@intToEnum(std.os.SYS, context.registers.orig_rax)), @intCast(isize, context.registers.rax) });
+                warn("pid = {}, '{}' = {}\n\n", .{ context.pid, @tagName(@intToEnum(std.os.SYS, context.registers.orig_syscall)), @intCast(isize, context.registers.syscall_then_result) });
                 try inspector.resume_tracee(context.pid);
             },
         }
