@@ -32,6 +32,8 @@ pub const EventAction = enum {
     INSPECT,
     // Syscall has finished, results may be inspected.
     INSPECT_RESULT,
+    // INSPECT_RESULT, except the syscall id is -1. Intended for use in nullifying syscalls.
+    INSPECT_RESULT_UNKNOWN_SYSCALL,
     // Syscall started or ended normally.
     NORMAL,
 };
@@ -144,8 +146,12 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
             ctx.registers = try ptrace.getregs(tracee.pid);
 
             // Allows inspecting syscall results without resorting to blocking.
-            if (in(ctx.registers.orig_syscall, inspections.calls) != inspections.inverse) {
+            const sc = ctx.registers.orig_syscall;
+            if (in(sc, inspections.calls) != inspections.inverse) {
                 return EventAction.INSPECT_RESULT;
+            }
+            if (sc == @bitCast(usize, @as(isize, -1))) {
+                return EventAction.INSPECT_RESULT_UNKNOWN_SYSCALL;
             }
 
             try end_syscall(tracee);

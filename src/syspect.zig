@@ -147,7 +147,7 @@ pub const Inspector = struct {
         while (true) {
             const action = try events.next_event(null, &self.tracee_map, &context, .{ .inverse = self.inverse, .calls = self.syscalls });
             switch (action) {
-                .CONT, .NORMAL => continue,
+                .CONT, .NORMAL, .INSPECT_RESULT_UNKNOWN_SYSCALL => continue,
                 .EXIT => {
                     self.has_tracees = false;
                     return null;
@@ -172,7 +172,7 @@ pub const Inspector = struct {
     /// Executes a syscall that has been inspected and waits for syscall to finish.
     /// Returns resulting registers on success.
     /// If result is null, program has concluded.
-    pub fn start_and_finish_syscall_blocking(self: *Inspector, context: events.Context) !?c.user_regs_struct {
+    pub fn start_and_finish_syscall_blocking(self: *Inspector, context: events.Context) !?c.registers {
         try self.resume_tracee(context.pid);
         var new_ctx = context;
 
@@ -197,8 +197,30 @@ pub const Inspector = struct {
                 .NORMAL => continue,
                 .INSPECT => @panic("This should not occur. Inspecting a call that should be finished"),
                 .INSPECT_RESULT => return new_ctx.registers,
+                .INSPECT_RESULT_UNKNOWN_SYSCALL => return error.NonExistentSyscall,
             }
         }
+    }
+
+    /// Nullifies the syscall, returning an error provided by the caller.
+    /// Only works on calls that are in a 'pre_call' state.
+    pub fn nullify_syscall(self: *Inspector, context: events.Context, errno: c_longlong) !void {
+        var newregs = context.registers;
+        newregs.orig_syscall = @bitCast(c_ulonglong, @as(c_longlong, -1)); // set syscall identifier to one that doesn't exist
+        try ptrace.setregs(context.pid, newregs);
+
+        _ = self.start_and_finish_syscall_blocking(context) catch |err| {
+            switch (err) {
+                error.NonExistentSyscall => {
+                    newregs.orig_syscall = context.registers.orig_syscall;
+                    newregs.syscall_then_result = @bitCast(c_ulonglong, errno);
+                    try ptrace.setregs(context.pid, newregs);
+                    return;
+                },
+                else => return err,
+            }
+        };
+        return error.ErrorNullifyingSyscall;
     }
 };
 
