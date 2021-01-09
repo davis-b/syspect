@@ -34,16 +34,14 @@ pub const Options = struct {
 ///
 ///                 can_modify_registers_here(context);
 ///
-///                 if (do_not_want_block) {
-///                     inspector.resume_tracee(context.pid);
-///                 } else if (block_until_syscall_finishes) {
+///                 if (block_until_syscall_finishes) {
 ///                     const maybe_registers = try inspector.start_and_finish_syscall(context.pid);
 ///                     if (maybe_registers) |regs| {
 ///                         warn("Syscall result: {}\n", .{regs});
+///                     } else {
+///                         continue;
 ///                     }
-///                 } else {
-///                     @compileError("One of (start_syscall, start_and_finish_syscall_blocking) must be called to conclude the next_syscall function.");
-///                 }
+///                 inspector.resume_tracee(context.pid);
 ///             },
 ///             .post_call => |context| {
 ///                 warn("Syscall result: {}\n", .{context.registers});
