@@ -147,11 +147,13 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
 
             // Allows inspecting syscall results without resorting to blocking.
             const sc = ctx.registers.orig_syscall;
-            if (in(sc, inspections.calls) != inspections.inverse) {
-                return EventAction.INSPECT_RESULT;
-            }
+            // TODO Replace usize and isize with proper Type
             if (sc == @bitCast(usize, @as(isize, -1))) {
                 return EventAction.INSPECT_RESULT_UNKNOWN_SYSCALL;
+            }
+
+            if (in(sc, inspections.calls) != inspections.inverse) {
+                return EventAction.INSPECT_RESULT;
             }
 
             try end_syscall(tracee);
