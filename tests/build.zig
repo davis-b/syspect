@@ -8,6 +8,7 @@ pub fn build(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget) !
         .{ "clone", "tests/src/clone.zig" },
         .{ "child signals", "tests/src/child_signals.zig" },
         .{ "modify_result", "tests/src/modify_result.zig" },
+        .{ "nullify_syscall", "tests/src/nullify_syscall.zig" },
     };
 
     const examples = .{
@@ -15,6 +16,7 @@ pub fn build(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget) !
         .{ "example-clone", "tests/example-programs/clone.zig" },
         .{ "example-child_signals", "tests/example-programs/child_signals.zig" },
         .{ "example-modify_result", "tests/example-programs/modify_result.zig" },
+        .{ "example-nullify_syscall", "tests/example-programs/nullify_syscall.zig" },
     };
 
     try b.makePath("zig-cache/bin/tests/");
