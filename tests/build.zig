@@ -7,12 +7,14 @@ pub fn build(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget) !
         .{ "fork", "tests/src/fork.zig" },
         .{ "clone", "tests/src/clone.zig" },
         .{ "child signals", "tests/src/child_signals.zig" },
+        .{ "modify_result", "tests/src/modify_result.zig" },
     };
 
     const examples = .{
         .{ "example-fork", "tests/example-programs/fork.zig" },
         .{ "example-clone", "tests/example-programs/clone.zig" },
         .{ "example-child_signals", "tests/example-programs/child_signals.zig" },
+        .{ "example-modify_result", "tests/example-programs/modify_result.zig" },
     };
 
     try b.makePath("zig-cache/bin/tests/");
@@ -27,9 +29,10 @@ pub fn build(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget) !
         // exe.install causes examples to be installed in both bin/ and bin/tests/
         // We do not want them to be installed in bin/
         // Unsure how to fix this without the following workaround.
-        const test_cmd = exe.run();
-        test_cmd.step.dependOn(b.getInstallStep());
-        test_step.dependOn(&test_cmd.step);
+        const run_step = exe.run();
+        run_step.addArg("do_end_early");
+        run_step.step.dependOn(b.getInstallStep());
+        test_step.dependOn(&run_step.step);
     }
 
     inline for (tests) |path| {
