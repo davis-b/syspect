@@ -1,4 +1,4 @@
-// This program prints the name of whichever path is being supplied to open(2) and openat(2) system calls.
+// This program prints the name of whichever path is being supplied to open, openat, and creat system calls.
 // Program takes an executable name or active PID as input.
 const std = @import("std");
 const os = std.os;
@@ -27,7 +27,7 @@ pub fn main() !void {
                 var buffer = [_]u8{0} ** std.fs.MAX_PATH_BYTES;
                 // openat(2) and open(2) share all arguments/argument positions, except for openat(2)'s first argument.
                 const pathname = switch (@intToEnum(os.SYS, context.registers.syscall)) {
-                    .open => try readString(context.pid, context.registers.arg1, buffer[0..]),
+                    .open, .creat => try readString(context.pid, context.registers.arg1, buffer[0..]),
                     .openat => try readString(context.pid, context.registers.arg2, buffer[0..]),
                     else => unreachable,
                 };
