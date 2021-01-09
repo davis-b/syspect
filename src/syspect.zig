@@ -214,7 +214,7 @@ pub const Inspector = struct {
             switch (err) {
                 error.NonExistentSyscall => {
                     newregs.orig_syscall = context.registers.orig_syscall;
-                    newregs.syscall_then_result = @bitCast(c_ulonglong, errno);
+                    newregs.syscall_then_result = @bitCast(c_ulonglong, -errno);
                     try ptrace.setregs(context.pid, newregs);
                     return;
                 },
