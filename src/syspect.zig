@@ -204,6 +204,7 @@ pub const Inspector = struct {
 
     /// Nullifies the syscall, returning an error provided by the caller.
     /// Only works on calls that are in a 'pre_call' state.
+    /// When this call finishes successfully, the tracee will have just exited its 'post_call' state.
     pub fn nullify_syscall(self: *Inspector, context: events.Context, errno: c_longlong) !void {
         var newregs = context.registers;
         newregs.orig_syscall = @bitCast(c_ulonglong, @as(c_longlong, -1)); // set syscall identifier to one that doesn't exist
