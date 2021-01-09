@@ -2,7 +2,23 @@ usingnamespace @cImport({
     @cInclude("sys/ptrace.h");
 });
 
-pub const registers = switch (@import("std").builtin.arch) {
+const arch = @import("std").builtin.arch;
+
+// Regular register type
+pub const regT = switch (arch) {
+    .x86_64 => c_ulonglong,
+    .i386 => c_long,
+    else => @compileError("Unsupported CPU architecture"),
+};
+
+// Signed register type
+pub const sregT = switch (arch) {
+    .x86_64 => c_longlong,
+    .i386 => c_long,
+    else => @compileError("Unsupported CPU architecture"),
+};
+
+pub const registers = switch (arch) {
     .x86_64 => x86_64_registers,
     // .i386 => _i386_registers,
     else => @compileError("Unsupported CPU architecture"),

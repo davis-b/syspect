@@ -69,7 +69,7 @@ test "main test" {
         const post_call = (try inspector.next_syscall()).?.post_call;
         utils.expectEnumEqual(SYS, SYS.gettid, post_call.registers.orig_syscall);
         testing.expectEqual(thread_leader_pid, post_call.pid);
-        testing.expectEqual(@intCast(c_ulonglong, post_call.pid), post_call.registers.syscall_then_result);
+        testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.syscall_then_result);
         try inspector.resume_tracee(post_call.pid);
     }
 

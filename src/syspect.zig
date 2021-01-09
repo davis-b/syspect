@@ -205,16 +205,16 @@ pub const Inspector = struct {
     /// Nullifies the syscall, returning an error provided by the caller.
     /// Only works on calls that are in a 'pre_call' state.
     /// When this call finishes successfully, the tracee will have just exited its 'post_call' state.
-    pub fn nullify_syscall(self: *Inspector, context: events.Context, errno: c_longlong) !void {
+    pub fn nullify_syscall(self: *Inspector, context: events.Context, errno: c.sregT) !void {
         var newregs = context.registers;
-        newregs.orig_syscall = @bitCast(c_ulonglong, @as(c_longlong, -1)); // set syscall identifier to one that doesn't exist
+        newregs.orig_syscall = @bitCast(c.regT, @as(c.sregT, -1)); // set syscall identifier to one that doesn't exist
         try ptrace.setregs(context.pid, newregs);
 
         _ = self.start_and_finish_syscall_blocking(context) catch |err| {
             switch (err) {
                 error.NonExistentSyscall => {
                     newregs.orig_syscall = context.registers.orig_syscall;
-                    newregs.syscall_then_result = @bitCast(c_ulonglong, -errno);
+                    newregs.syscall_then_result = @bitCast(c.regT, -errno);
                     try ptrace.setregs(context.pid, newregs);
                     return;
                 },

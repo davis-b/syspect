@@ -25,7 +25,7 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
             },
             .post_call => |context| {
                 if (context.registers.orig_syscall == @enumToInt(SYS.gettid)) {
-                    testing.expectEqual(@intCast(c_ulonglong, context.pid), context.registers.syscall_then_result);
+                    testing.expectEqual(@intCast(syspect.c.regT, context.pid), context.registers.syscall_then_result);
                 }
                 try inspector.resume_tracee(context.pid);
             },
@@ -106,7 +106,7 @@ fn test_call(context: syspect.Inspector.SyscallContext, expected: Syscall) !void
 
             // Ensure gettid returns the same pid we expect to be making the syscall.
             if (post_call.registers.orig_syscall == @enumToInt(SYS.gettid)) {
-                testing.expectEqual(@intCast(c_ulonglong, post_call.pid), post_call.registers.syscall_then_result);
+                testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.syscall_then_result);
             }
         },
     }
@@ -130,7 +130,7 @@ pub const Syscall = struct {
     pid: ?std.os.pid_t = null,
 
     // Expected result. Null means we do not test against the result.
-    result: ?c_ulonglong = null,
+    result: ?syspect.c.regT = null,
 
     // Has the syscall been started? Value changed when it passes a test,
     //  as we expect all syscalls to loop through 'start, end' states.

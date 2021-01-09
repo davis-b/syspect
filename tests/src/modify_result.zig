@@ -32,8 +32,7 @@ test "change syscall result" {
                     testing.expectEqual(child_pid, first_result.?);
                 } else {
                     var new_regs = context.registers;
-                    const T = c_ulonglong;
-                    new_regs.syscall_then_result = @intCast(T, first_result.? - 1);
+                    new_regs.syscall_then_result = @intCast(syspect.c.regT, first_result.? - 1);
                     try syspect.ptrace.setregs(context.pid, new_regs);
                     testing.expectEqual(child_pid, @intCast(os.pid_t, context.registers.syscall_then_result));
                 }
