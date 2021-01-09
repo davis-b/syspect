@@ -28,13 +28,13 @@ test "change syscall result" {
             },
             .post_call => |context| {
                 if (first_result == null) {
-                    first_result = @intCast(os.pid_t, context.registers.syscall_then_result);
+                    first_result = @intCast(os.pid_t, context.registers.result);
                     testing.expectEqual(child_pid, first_result.?);
                 } else {
                     var new_regs = context.registers;
-                    new_regs.syscall_then_result = @intCast(syspect.c.regT, first_result.? - 1);
+                    new_regs.result = @intCast(syspect.c.regT, first_result.? - 1);
                     try syspect.ptrace.setregs(context.pid, new_regs);
-                    testing.expectEqual(child_pid, @intCast(os.pid_t, context.registers.syscall_then_result));
+                    testing.expectEqual(child_pid, @intCast(os.pid_t, context.registers.result));
                 }
                 try inspector.resume_tracee(context.pid);
             },

@@ -35,12 +35,12 @@ pub const x86_64_registers = extern struct {
     arg4: c_ulonglong, // r10
     arg6: c_ulonglong, // r9
     arg5: c_ulonglong, // r8
-    syscall_then_result: c_ulonglong, // syscall number before execution, syscall result after execution
+    result: c_ulonglong, // syscall result after execution
     rcx: c_ulonglong,
     arg3: c_ulonglong, // rdx
     arg2: c_ulonglong, // rsi
     arg1: c_ulonglong, // rdi
-    orig_syscall: c_ulonglong, // the syscall number is stored in here before 'rax' gets replaced with syscall result
+    syscall: c_ulonglong, // the syscall number
     rip: c_ulonglong,
     cs: c_ulonglong,
     eflags: c_ulonglong,
@@ -61,12 +61,12 @@ const _i386_registers = extern struct {
     arg4: c_long, // esi
     arg5: c_long, // edi
     arg6: c_long, // ebp
-    syscall_then_result: c_long, // syscall number before execution, syscall result after execution
+    result: c_long, // syscall result after execution
     xds: c_long,
     xes: c_long,
     xfs: c_long,
     xgs: c_long,
-    orig_syscall: c_long, // the syscall number is stored in here before 'eax' gets replaced with syscall result
+    syscall: c_long, // the syscall number
     eip: c_long,
     xcs: c_long,
     eflags: c_long,

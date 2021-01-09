@@ -41,14 +41,14 @@ test "main test" {
     // Gather child pid from the fork result
     const child_pid = fork: {
         const pre_call = (try inspector.next_syscall()).?.pre_call;
-        utils.expectEnumEqual(SYS, SYS.fork, pre_call.registers.orig_syscall);
+        utils.expectEnumEqual(SYS, SYS.fork, pre_call.registers.syscall);
         try inspector.resume_tracee(pre_call.pid);
 
         const post_call = (try inspector.next_syscall()).?.post_call;
-        utils.expectEnumEqual(SYS, SYS.fork, post_call.registers.orig_syscall);
+        utils.expectEnumEqual(SYS, SYS.fork, post_call.registers.syscall);
         testing.expectEqual(thread_leader_pid, post_call.pid);
         try inspector.resume_tracee(post_call.pid);
-        break :fork @intCast(std.os.pid_t, post_call.registers.syscall_then_result);
+        break :fork @intCast(std.os.pid_t, post_call.registers.result);
     };
 
     // These calls could happen in almost any order, use ooo_call_tracking to test with that in mind.
@@ -63,13 +63,13 @@ test "main test" {
     // Final sanity test for gettid.
     gettid: {
         const pre_call = (try inspector.next_syscall()).?.pre_call;
-        utils.expectEnumEqual(SYS, SYS.gettid, pre_call.registers.orig_syscall);
+        utils.expectEnumEqual(SYS, SYS.gettid, pre_call.registers.syscall);
         try inspector.resume_tracee(pre_call.pid);
 
         const post_call = (try inspector.next_syscall()).?.post_call;
-        utils.expectEnumEqual(SYS, SYS.gettid, post_call.registers.orig_syscall);
+        utils.expectEnumEqual(SYS, SYS.gettid, post_call.registers.syscall);
         testing.expectEqual(thread_leader_pid, post_call.pid);
-        testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.syscall_then_result);
+        testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.result);
         try inspector.resume_tracee(post_call.pid);
     }
 

@@ -135,7 +135,7 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
             // Collect syscall arguments.
             ctx.registers = try ptrace.getregs(tracee.pid);
 
-            if (in(ctx.registers.orig_syscall, inspections.calls) != inspections.inverse) {
+            if (in(ctx.registers.syscall, inspections.calls) != inspections.inverse) {
                 return EventAction.INSPECT;
             }
 
@@ -146,7 +146,7 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
             ctx.registers = try ptrace.getregs(tracee.pid);
 
             // Allows inspecting syscall results without resorting to blocking.
-            const sc = ctx.registers.orig_syscall;
+            const sc = ctx.registers.syscall;
             // TODO Replace usize and isize with proper Type
             if (sc == @bitCast(c.regT, @as(c.sregT, -1))) {
                 return EventAction.INSPECT_RESULT_UNKNOWN_SYSCALL;

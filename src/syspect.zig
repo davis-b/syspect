@@ -207,14 +207,14 @@ pub const Inspector = struct {
     /// When this call finishes successfully, the tracee will have just exited its 'post_call' state.
     pub fn nullify_syscall(self: *Inspector, context: events.Context, errno: c.sregT) !void {
         var newregs = context.registers;
-        newregs.orig_syscall = @bitCast(c.regT, @as(c.sregT, -1)); // set syscall identifier to one that doesn't exist
+        newregs.syscall = @bitCast(c.regT, @as(c.sregT, -1)); // set syscall identifier to one that doesn't exist
         try ptrace.setregs(context.pid, newregs);
 
         _ = self.start_and_finish_syscall_blocking(context) catch |err| {
             switch (err) {
                 error.NonExistentSyscall => {
-                    newregs.orig_syscall = context.registers.orig_syscall;
-                    newregs.syscall_then_result = @bitCast(c.regT, -errno);
+                    newregs.syscall = context.registers.syscall;
+                    newregs.result = @bitCast(c.regT, -errno);
                     try ptrace.setregs(context.pid, newregs);
                     return;
                 },
