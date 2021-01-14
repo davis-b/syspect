@@ -18,10 +18,10 @@ _syspect_ is a syscall inspection/modification library built upon [ptrace](https
 _syspect_ is built in [zig](https://ziglang.org/), a C-like programming language.
 
 #### What is ptrace? ####
-_ptrace_ is a debugging interface provided by the Linux kernel. While used to great effect by debuggers such as [gdb](https://www.gnu.org/software/gdb/), it is somewhat complex.
+_ptrace_ is a debugging interface provided by many \*nix kernels. While used to great effect by debuggers such as [gdb](https://www.gnu.org/software/gdb/), it is somewhat complex.
 
 #### How does this relate to _syspect_? ####
-To get _ptrace_ working correctly, especially when dealing with multiple tracees at once, requires knowledge of Linux that may not be necessary for the resulting program.  
+To get _ptrace_ working correctly, especially when dealing with multiple tracees at once, requires knowledge of the underlying operating system that may not be necessary for the resulting program.  
 This is where _syspect_ comes in. _syspect_ is easy to use and hard to misuse.  
 If you are writing a program that can make good use of it, _syspect_ aims to make your life easier than _ptrace_ would.
 
@@ -29,9 +29,9 @@ If you are writing a program that can make good use of it, _syspect_ aims to mak
 
 ### Which architectures / operating systems does _syspect_ support? ###
 
-Currently, _syspect_ only supports x86_64 Linux.
+Currently, _syspect_ only supports x86_64 Linux.  
 Support for other CPU architectures is a possibility for future updates.  
-Support for other operating systems is not possible without a massive rewrite, due to our reliance on _ptrace_.
+Support for other operating systems is possible if they implement _ptrace_.
 
 ### Are there any other requirements? ###
 
