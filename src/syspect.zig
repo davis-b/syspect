@@ -159,7 +159,7 @@ pub const Inspector = struct {
             switch (action) {
                 .CONT, .NORMAL, .INSPECT_RESULT_UNKNOWN_SYSCALL => continue,
                 .EXIT => {
-                    self.has_tracees = false;
+                    if (self.tracee_map.count() == 0) self.has_tracees = false;
                     return null;
                 },
                 .INSPECT => {
@@ -199,7 +199,7 @@ pub const Inspector = struct {
                     return null;
                 },
                 .EXIT => {
-                    self.has_tracees = false;
+                    if (self.tracee_map.count() == 0) self.has_tracees = false;
                     return null;
                 },
                 // NORMAL action means a non-inspected syscall has started or ended.
