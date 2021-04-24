@@ -51,10 +51,22 @@ pub const Options = struct {
 ///         }
 ///     }
 pub const Inspector = struct {
+    /// The syscalls we filter in or out.
     syscalls: []const os.SYS,
-    multithread: bool,
+
+    /// If true, our syscalls field is what we filter out.
+    /// Otherwise, we ignore syscalls that are not in our syscalls field.
     inverse: bool,
+
+    /// If true, automatically follow child threads and processes.
+    multithread: bool,
+
+    /// Stores process info about our tracees.
+    /// Maps a pid to an events.Tracee struct.
     tracee_map: events.TraceeMap,
+
+    /// Written to internally. Read internally and externally.
+    /// Indicates if the Inspector has at least one active tracee.
     has_tracees: bool,
 
     pub const SyscallContext = union(enum) {
