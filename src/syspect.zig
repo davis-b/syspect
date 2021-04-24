@@ -93,11 +93,11 @@ pub const Inspector = struct {
 
         try self.set_ptrace_options(tracee_pid);
 
-        _ = try events.get_or_make_tracee(&self.tracee_map, tracee_pid);
-        self.has_tracees = true;
-
         // Resume/Set off tracee
         _ = try ptrace.syscall(tracee_pid);
+
+        _ = try events.get_or_make_tracee(&self.tracee_map, tracee_pid);
+        self.has_tracees = true;
 
         return tracee_pid;
     }
