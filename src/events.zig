@@ -2,7 +2,7 @@ const std = @import("std");
 const os = std.os;
 
 const builtin = @import("builtin");
-fn no_op_print(fmt: []const u8, args: var) void {}
+fn no_op_print(fmt: []const u8, args: anytype) void {}
 const print = if (builtin.is_test or builtin.mode != .Debug) no_op_print else std.debug.warn;
 
 const waitpid_file = @import("waitpid.zig");
@@ -104,7 +104,7 @@ pub fn handle_wait_result(wr: waitpid_file.WaitResult, tracee_map: *TraceeMap, c
 
         // Process was stopped by the delivery of a signal.
         .stop => |signal| {
-            print("> [{}] has received linux signal: {}\n", .{ tracee.pid, @tagName(signal) });
+            print("> [{}] has received linux signal: {s}\n", .{ tracee.pid, @tagName(signal) });
 
             switch (signal) {
                 // These signals are associated with the death of the tracee process.
@@ -162,7 +162,7 @@ pub fn handle_event(tracee: *Tracee, tracee_map: *TraceeMap, ctx: *Context, insp
     return EventAction.NORMAL;
 }
 
-fn in(needle: var, haystack: []const os.SYS) bool {
+fn in(needle: anytype, haystack: []const os.SYS) bool {
     for (haystack) |hay| {
         if (needle == @enumToInt(hay)) return true;
     }
@@ -196,13 +196,13 @@ fn end_syscall(tracee: *Tracee) !void {
 }
 
 pub fn get_or_make_tracee(tracee_map: *TraceeMap, pid: os.pid_t) !*Tracee {
-    if (tracee_map.get(pid)) |kv| {
-        return &kv.value;
+    if (tracee_map.getPtr(pid)) |v| {
+        return v;
     } else {
         const tracee = Tracee{ .pid = pid, .state = .RUNNING };
         _ = try tracee_map.put(pid, tracee);
-        if (tracee_map.get(pid)) |kv| {
-            return &kv.value;
+        if (tracee_map.getPtr(pid)) |v| {
+            return v;
         } else @panic("Very unexpected event. Could not get value we just placed in a hashmap");
     }
     @panic("Very unexpected event. This should never happen");

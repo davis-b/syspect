@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn expectEnumEqual(comptime Enum: type, a: var, b: var) void {
+pub fn expectEnumEqual(comptime Enum: type, a: anytype, b: anytype) void {
     const valid_a = convert(Enum, a);
     const valid_b = convert(Enum, b);
 
@@ -10,7 +10,7 @@ pub fn expectEnumEqual(comptime Enum: type, a: var, b: var) void {
 }
 
 /// Converts a valid type to Enum type
-fn convert(comptime Enum: type, i: var) Enum {
+fn convert(comptime Enum: type, i: anytype) Enum {
     return switch (@typeInfo(@TypeOf(i))) {
         .Int => @intToEnum(Enum, i),
         .Enum => switch (@TypeOf(i)) {

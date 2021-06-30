@@ -10,8 +10,8 @@ pub fn main() anyerror!void {
         const child_tid = os.linux.gettid();
         os.exit(2);
     } else {
-        const status = os.waitpid(tid, 0);
-        if (!os.WIFEXITED(status)) {
+        const pidresult = os.waitpid(tid, 0);
+        if (!os.WIFEXITED(pidresult.status)) {
             return error.UnexpectedWaitStatus;
         }
         const parent_tid = os.linux.gettid();

@@ -31,14 +31,14 @@ pub fn main() !void {
                     .openat => try readString(context.pid, context.registers.arg2, buffer[0..]),
                     else => unreachable,
                 };
-                warn("pid = {}, '{}' path = '{}'\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.syscall)), pathname });
+                warn("pid = {}, '{s}' path = '{s}'\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.syscall)), pathname });
 
                 try inspector.resume_tracee(context.pid);
             },
             // The syscall has finished and the result will be returned to the tracee when resumed.
             // Here we can view the result as well as modify what the tracee will see as the return value.
             .post_call => |context| {
-                warn("pid = {}, '{}' = {}\n\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.syscall)), @intCast(isize, context.registers.result) });
+                warn("pid = {}, '{s}' = {}\n\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.syscall)), @intCast(isize, context.registers.result) });
                 try inspector.resume_tracee(context.pid);
             },
         }
@@ -101,5 +101,5 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 }
 
 fn usage(our_name: [*:0]u8) void {
-    warn("To use {}, call it with either: another program's path, or a running process' PID\n", .{our_name});
+    warn("To use {s}, call it with either: another program's path, or a running process' PID\n", .{our_name});
 }

@@ -9,6 +9,6 @@ pub fn main() anyerror!void {
 
     const tid = os.linux.gettid();
     const modified = os.linux.gettid();
-    std.testing.expect(tid != modified);
-    std.testing.expect(modified == tid - 1);
+    try std.testing.expect(tid != modified);
+    try std.testing.expect(modified == tid - 1);
 }

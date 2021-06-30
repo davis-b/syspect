@@ -5,7 +5,7 @@ const thread = std.Thread;
 
 pub fn main() anyerror!void {
     getTid(0);
-    const thread1 = try thread.spawn(@as(u8, 1), getTid);
+    const thread1 = try thread.spawn(getTid, @as(u8, 1));
     thread1.wait();
     getTid(2);
 }

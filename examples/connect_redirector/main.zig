@@ -34,7 +34,7 @@ pub fn main() !void {
 }
 
 fn usage(our_name: [*:0]u8) void {
-    warn("{} requires an argument\n", .{our_name});
+    warn("{s} requires an argument\n", .{our_name});
 }
 
 fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
@@ -71,7 +71,7 @@ fn redirectConnectCall(context: syspect.Context) !void {
         if (read_bytes == 0) break;
         const user_input = buffer[0..read_bytes];
         const new_port = std.fmt.parseInt(u16, user_input, 10) catch |err| {
-            warn("\"{}\" is an invalid port number\n", .{user_input});
+            warn("\"{s}\" is an invalid port number\n", .{user_input});
             continue;
         };
         address.setPort(new_port);
@@ -84,7 +84,7 @@ fn redirectConnectCall(context: syspect.Context) !void {
         if (read_bytes == 0) break;
         const user_input = buffer[0..read_bytes];
         const new_addr = std.net.Address.parseIp(user_input, address.getPort()) catch |err| {
-            warn("\"{}\" is an invalid ip\n", .{user_input});
+            warn("\"{s}\" is an invalid ip\n", .{user_input});
             continue;
         };
         address = new_addr;

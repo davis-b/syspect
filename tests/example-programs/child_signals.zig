@@ -24,9 +24,10 @@ pub fn main() anyerror!void {
         wait_for_signal(signal);
     } else {
         try os.kill(pid, signal);
-        const wstatus = os.waitpid(pid, 0);
-        std.testing.expect(os.WIFEXITED(wstatus));
-        std.testing.expectEqual(@as(u32, 2), os.WEXITSTATUS(wstatus));
+        const wait_result = os.waitpid(pid, 0);
+        const wstatus = wait_result.status;
+        try std.testing.expect(os.WIFEXITED(wstatus));
+        try std.testing.expectEqual(@as(u32, 2), os.WEXITSTATUS(wstatus));
         _ = os.linux.gettid();
     }
 }

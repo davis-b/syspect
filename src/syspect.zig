@@ -247,7 +247,7 @@ fn fork_spawn_process(allocator: *std.mem.Allocator, argv: []const []const u8) !
         // child process
         0 => {
             _ = try ptrace.ptrace(c.PTRACE_TRACEME, 0, 0, 0);
-            const err = os.execvpe(allocator, argv, &envmap);
+            const err = std.process.execve(allocator, argv, &envmap);
             return err;
         },
         else => {

@@ -30,9 +30,9 @@ pub fn main() !void {
     var pid_name_cache = std.AutoHashMap(os.pid_t, []u8).init(allocator);
     defer pid_name_cache.deinit();
     defer {
-        var iter = pid_name_cache.iterator();
-        while (iter.next()) |kv| {
-            allocator.free(kv.value);
+        var iter = pid_name_cache.valueIterator();
+        while (iter.next()) |v| {
+            allocator.free(v.*);
         }
     }
 
@@ -40,7 +40,7 @@ pub fn main() !void {
         switch (syscall.*) {
             .pre_call => |context| {
                 const pid_name = processName(allocator, &pid_name_cache, context.pid);
-                warn("[{} - {}] starting {}\n", .{ context.pid, pid_name, enumName(context.registers.syscall) });
+                warn("[{} - {s}] starting {s}\n", .{ context.pid, pid_name, enumName(context.registers.syscall) });
                 try inspector.resume_tracee(context.pid);
             },
             .post_call => |context| {
@@ -49,7 +49,7 @@ pub fn main() !void {
                 // Unless the system resets registers to their state at the initial call? Seems unlikely.
                 print_info(context);
                 const pid_name = processName(allocator, &pid_name_cache, context.pid);
-                warn("[{} - {}] finished {}\n\n", .{ context.pid, pid_name, enumName(context.registers.syscall) });
+                warn("[{} - {s}] finished {s}\n\n", .{ context.pid, pid_name, enumName(context.registers.syscall) });
                 try inspector.resume_tracee(context.pid);
             },
         }
@@ -57,13 +57,13 @@ pub fn main() !void {
 }
 
 fn processName(allocator: *std.mem.Allocator, cache: *std.AutoHashMap(os.pid_t, []u8), pid: os.pid_t) ![]const u8 {
-    if (cache.getValue(pid)) |name| {
+    if (cache.get(pid)) |name| {
         return name;
     }
 
     var buffer = [_]u8{0} ** 30;
     var fbs = std.io.fixedBufferStream(buffer[0..]);
-    try std.fmt.format(fbs.outStream(), "/proc/{}/comm", .{pid});
+    try std.fmt.format(fbs.writer(), "/proc/{}/comm", .{pid});
 
     const fd = try std.os.open(buffer[0..fbs.pos], 0, os.O_RDONLY);
     defer std.os.close(fd);
@@ -78,7 +78,7 @@ fn processName(allocator: *std.mem.Allocator, cache: *std.AutoHashMap(os.pid_t, 
     return name;
 }
 
-fn enumName(int: var) []const u8 {
+fn enumName(int: anytype) []const u8 {
     inline for (std.meta.fields(os.SYS)) |f| {
         if (int == f.value) return f.name;
     }
@@ -86,7 +86,7 @@ fn enumName(int: var) []const u8 {
 }
 
 fn usage(our_name: [*:0]u8) void {
-    warn("{} requires an argument\n", .{our_name});
+    warn("{s} requires an argument\n", .{our_name});
 }
 
 fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
@@ -121,7 +121,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 /// Prints the system call name and its first four arguments
 fn print_info(context: syspect.Context) void {
     warn("[{}] ", .{context.pid});
-    warn("{} ( ", .{enumName(context.registers.syscall)});
+    warn("{s} ( ", .{enumName(context.registers.syscall)});
     warn("{}, ", .{context.registers.arg1});
     warn("{}, ", .{context.registers.arg2});
     warn("{}, ", .{context.registers.arg3});

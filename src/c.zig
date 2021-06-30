@@ -2,7 +2,7 @@ usingnamespace @cImport({
     @cInclude("sys/ptrace.h");
 });
 
-const arch = @import("std").builtin.arch;
+const arch = @import("std").Target.current.cpu.arch;
 
 // Regular register type
 pub const regT = switch (arch) {
