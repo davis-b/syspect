@@ -5,7 +5,7 @@ pub fn expectEnumEqual(comptime Enum: type, a: anytype, b: anytype) void {
     const valid_b = convert(Enum, b);
 
     if (valid_a != valid_b) {
-        std.debug.panic("expected {}, found {}\n", .{ @tagName(valid_a), @tagName(valid_b) });
+        std.debug.panic("expected {s}, found {s}\n", .{ @tagName(valid_a), @tagName(valid_b) });
     }
 }
 

@@ -53,9 +53,9 @@ test "clone and futex" {
             try events.resume_from_inspection(&tmap, context.pid);
         }
 
-        std.testing.expectEqual(ei.expected_action, action);
-        std.testing.expectEqual(@enumToInt(ei.syscall), context.registers.syscall);
-        std.testing.expectEqual(ei.wait_result.pid, context.pid);
+        try std.testing.expectEqual(ei.expected_action, action);
+        try std.testing.expectEqual(@enumToInt(ei.syscall), context.registers.syscall);
+        try std.testing.expectEqual(ei.wait_result.pid, context.pid);
     }
 }
 

@@ -46,7 +46,7 @@ test "main test" {
 
         const post_call = (try inspector.next_syscall()).?.post_call;
         utils.expectEnumEqual(SYS, SYS.fork, post_call.registers.syscall);
-        testing.expectEqual(thread_leader_pid, post_call.pid);
+        try testing.expectEqual(thread_leader_pid, post_call.pid);
         try inspector.resume_tracee(post_call.pid);
         break :fork @intCast(std.os.pid_t, post_call.registers.result);
     };
@@ -61,18 +61,18 @@ test "main test" {
     try generic.ooo_call_tracking(&inspector, syscalls[0..]);
 
     // Final sanity test for gettid.
-    gettid: {
+    {
         const pre_call = (try inspector.next_syscall()).?.pre_call;
         utils.expectEnumEqual(SYS, SYS.gettid, pre_call.registers.syscall);
         try inspector.resume_tracee(pre_call.pid);
 
         const post_call = (try inspector.next_syscall()).?.post_call;
         utils.expectEnumEqual(SYS, SYS.gettid, post_call.registers.syscall);
-        testing.expectEqual(thread_leader_pid, post_call.pid);
-        testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.result);
+        try testing.expectEqual(thread_leader_pid, post_call.pid);
+        try testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.result);
         try inspector.resume_tracee(post_call.pid);
     }
 
     // Expect program has exited.
-    testing.expectEqual(try inspector.next_syscall(), null);
+    try testing.expectEqual(try inspector.next_syscall(), null);
 }

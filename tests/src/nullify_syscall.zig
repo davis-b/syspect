@@ -33,6 +33,6 @@ test "nullify a syscall" {
     }
 
     // Ensure we properly acknowledge a state where all tracees have exited.
-    testing.expectEqual(false, inspector.has_tracees);
-    testing.expectEqual(try inspector.next_syscall(), null);
+    try testing.expectEqual(false, inspector.has_tracees);
+    try testing.expectEqual(try inspector.next_syscall(), null);
 }

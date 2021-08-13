@@ -25,7 +25,7 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
             },
             .post_call => |context| {
                 if (context.registers.syscall == @enumToInt(SYS.gettid)) {
-                    testing.expectEqual(@intCast(syspect.c.regT, context.pid), context.registers.result);
+                    try testing.expectEqual(@intCast(syspect.c.regT, context.pid), context.registers.result);
                 }
                 try inspector.resume_tracee(context.pid);
             },
@@ -33,8 +33,8 @@ pub fn ensure_pid_properly_tracked(target_argv: []const []const u8) !void {
     }
 
     // Ensure we properly acknowledge a state where all tracees have exited.
-    testing.expectEqual(false, inspector.has_tracees);
-    testing.expectEqual(try inspector.next_syscall(), null);
+    try testing.expectEqual(false, inspector.has_tracees);
+    try testing.expectEqual(try inspector.next_syscall(), null);
 }
 
 /// Runs and inspects a program, tracking specific calls.
@@ -88,25 +88,25 @@ fn test_call(context: syspect.Inspector.SyscallContext, expected: Syscall) !void
     switch (context) {
         .pre_call => |pre_call| {
             utils.expectEnumEqual(SYS, expected.id, pre_call.registers.syscall);
-            testing.expectEqual(expected.started, false);
+            try testing.expectEqual(expected.started, false);
             if (expected.pid) |epid| {
-                testing.expectEqual(epid, pre_call.pid);
+                try testing.expectEqual(epid, pre_call.pid);
             }
             // Do not test for result here, because there is no result on a pre_call
         },
         .post_call => |post_call| {
             utils.expectEnumEqual(SYS, expected.id, post_call.registers.syscall);
-            testing.expectEqual(expected.started, true);
+            try testing.expectEqual(expected.started, true);
             if (expected.pid) |epid| {
-                testing.expectEqual(epid, post_call.pid);
+                try testing.expectEqual(epid, post_call.pid);
             }
             if (expected.result) |eresult| {
-                testing.expectEqual(eresult, post_call.registers.result);
+                try testing.expectEqual(eresult, post_call.registers.result);
             }
 
             // Ensure gettid returns the same pid we expect to be making the syscall.
             if (post_call.registers.syscall == @enumToInt(SYS.gettid)) {
-                testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.result);
+                try testing.expectEqual(@intCast(syspect.c.regT, post_call.pid), post_call.registers.result);
             }
         },
     }
@@ -171,6 +171,6 @@ fn verify(syscalls: []Syscall, syscall: Syscall) !*Syscall {
             return hay;
         }
     }
-    std.debug.warn("syscall unmatched: {} {}\n", .{ @tagName(syscall.id), syscall });
+    std.debug.warn("syscall unmatched: {s} {}\n", .{ @tagName(syscall.id), syscall });
     return error.UnmatchedSyscall;
 }

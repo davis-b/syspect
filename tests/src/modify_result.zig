@@ -29,12 +29,12 @@ test "change syscall result" {
             .post_call => |context| {
                 if (first_result == null) {
                     first_result = @intCast(os.pid_t, context.registers.result);
-                    testing.expectEqual(child_pid, first_result.?);
+                    try testing.expectEqual(child_pid, first_result.?);
                 } else {
                     var new_regs = context.registers;
                     new_regs.result = @intCast(syspect.c.regT, first_result.? - 1);
                     try syspect.ptrace.setregs(context.pid, new_regs);
-                    testing.expectEqual(child_pid, @intCast(os.pid_t, context.registers.result));
+                    try testing.expectEqual(child_pid, @intCast(os.pid_t, context.registers.result));
                 }
                 try inspector.resume_tracee(context.pid);
             },
@@ -42,6 +42,6 @@ test "change syscall result" {
     }
 
     // Ensure we properly acknowledge a state where all tracees have exited.
-    testing.expectEqual(false, inspector.has_tracees);
-    testing.expectEqual(try inspector.next_syscall(), null);
+    try testing.expectEqual(false, inspector.has_tracees);
+    try testing.expectEqual(try inspector.next_syscall(), null);
 }
