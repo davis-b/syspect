@@ -53,7 +53,7 @@ fn init(allocator: *std.mem.Allocator, inspector: *syspect.Inspector) !void {
 }
 
 fn redirectConnectCall(context: syspect.Context) !void {
-    const sockaddr_register_ptr = @intCast(usize, context.registers.arg2);
+    const sockaddr_register_ptr = @bitCast(usize, context.registers.arg2);
     const sockaddr = try sockaddr_rw.readSockaddr_PVReadv(context.pid, sockaddr_register_ptr);
 
     if (sockaddr.family != os.AF_INET and sockaddr.family != os.AF_INET6) {
