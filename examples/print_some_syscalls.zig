@@ -127,5 +127,13 @@ fn print_info(context: syspect.Context) void {
     warn("{}, ", .{context.registers.arg3});
     warn("{}", .{context.registers.arg4});
     warn(" ) = ", .{});
-    warn("{}\n", .{@intCast(isize, context.registers.result)});
+
+    var result = @bitCast(isize, context.registers.result);
+    // Kernel magic for when a syscall result returns -1.
+    const magic_error_bit = 0x40000000;
+    // Sometimes it returns -2 when it aims for -1.
+    if (result & magic_error_bit != 0 and result == -2) {
+        result += 1;
+    }
+    warn("{}\n", .{result});
 }
