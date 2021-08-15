@@ -35,7 +35,7 @@ Support for other operating systems is possible if they implement _ptrace_.
 
 ### Are there any other requirements? ###
 
-zig version 0.6.0 is required to use this library.  
+zig version 0.8.0 is required to use this library.
 _syspect_ does link against C in order to use ptrace. That requirement should not be a problem, though it is worth mentioning.
 
 - - -

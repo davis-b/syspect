@@ -1,4 +1,4 @@
-// Tested with Zig version 0.6
+// Tested with Zig version 0.8
 const std = @import("std");
 const Builder = std.build.Builder;
 const Mode = @import("builtin").Mode;
