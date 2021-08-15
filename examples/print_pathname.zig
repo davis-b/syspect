@@ -38,7 +38,7 @@ pub fn main() !void {
             // The syscall has finished and the result will be returned to the tracee when resumed.
             // Here we can view the result as well as modify what the tracee will see as the return value.
             .post_call => |context| {
-                warn("pid = {}, '{s}' = {}\n\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.syscall)), @intCast(isize, context.registers.result) });
+                warn("pid = {}, '{s}' = {}\n\n", .{ context.pid, @tagName(@intToEnum(os.SYS, context.registers.syscall)), @bitCast(isize, context.registers.result) });
                 try inspector.resume_tracee(context.pid);
             },
         }
