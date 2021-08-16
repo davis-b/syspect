@@ -11,24 +11,24 @@ pub fn build(b: *Builder, mode: std.builtin.Mode, target: std.zig.CrossTarget) !
         .{ "nullify_syscall", "tests/src/nullify_syscall.zig" },
     };
 
-    const examples = .{
-        .{ "example-fork", "tests/example-programs/fork.zig" },
-        .{ "example-clone", "tests/example-programs/clone.zig" },
-        .{ "example-child_signals", "tests/example-programs/child_signals.zig" },
-        .{ "example-modify_result", "tests/example-programs/modify_result.zig" },
-        .{ "example-nullify_syscall", "tests/example-programs/nullify_syscall.zig" },
+    const testable_programs = .{
+        .{ "testable-fork", "tests/testable-programs/fork.zig" },
+        .{ "testable-clone", "tests/testable-programs/clone.zig" },
+        .{ "testable-child_signals", "tests/testable-programs/child_signals.zig" },
+        .{ "testable-modify_result", "tests/testable-programs/modify_result.zig" },
+        .{ "testable-nullify_syscall", "tests/testable-programs/nullify_syscall.zig" },
     };
 
     try b.makePath("zig-cache/bin/tests/");
 
     const test_step = b.step("test", "Run library tests");
-    inline for (examples) |path| {
+    inline for (testable_programs) |path| {
         const exe = b.addExecutable(path[0], path[1]);
         exe.setTarget(target);
         exe.setBuildMode(mode);
         exe.setOutputDir("zig-cache/bin/tests/");
         // TODO
-        // exe.install causes examples to be installed in both bin/ and bin/tests/
+        // exe.install causes testable_programs to be installed in both bin/ and bin/tests/
         // We do not want them to be installed in bin/
         // Unsure how to fix this without the following workaround.
         const run_step = exe.run();

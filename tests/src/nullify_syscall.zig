@@ -7,7 +7,7 @@ const syspect = @import("syspect");
 const generic = @import("generic.zig");
 const utils = @import("utils.zig");
 
-const target_argv = [_][]const u8{"zig-cache/bin/tests/example-nullify_syscall"};
+const target_argv = [_][]const u8{"zig-cache/bin/tests/testable-nullify_syscall"};
 const allocator = std.testing.allocator;
 
 test "nullify a syscall" {

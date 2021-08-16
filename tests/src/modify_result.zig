@@ -7,7 +7,7 @@ const syspect = @import("syspect");
 
 const utils = @import("utils.zig");
 
-const target_argv = [_][]const u8{"zig-cache/bin/tests/example-modify_result"};
+const target_argv = [_][]const u8{"zig-cache/bin/tests/testable-modify_result"};
 const allocator = std.testing.allocator;
 
 test "change syscall result" {

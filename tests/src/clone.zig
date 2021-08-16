@@ -6,7 +6,7 @@ const syspect = @import("syspect");
 
 const generic = @import("generic.zig");
 
-const target_argv = [_][]const u8{"zig-cache/bin/tests/example-clone"};
+const target_argv = [_][]const u8{"zig-cache/bin/tests/testable-clone"};
 const allocator = std.testing.allocator;
 
 test "generic pid tracking" {
